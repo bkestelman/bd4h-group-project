@@ -1,6 +1,6 @@
 """Loads ADMISSIONS and NOTEEVENTS from S3"""
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import lag, col, datediff
+from pyspark.sql.functions import col, when, lag, lead, datediff
 from pyspark.sql.window import Window
 
 import config
@@ -23,38 +23,42 @@ def load_data():
 
     return admissions, noteevents
 
-def add_prev_admittime(admissions):
+def add_next_admittime(admissions):
     """
-    Adds the column PREV_ADMITTIME to the given admissions df
-    Returns df with columns SUBJECT_ID, ADMITTIME, PREV_ADMITTIME (may be useful to keep more columns)
-    Decided to calculate PREV_ADMITTIME instead of NEXT_ADMITTIME (as in the blog) because this way each row directly represents a readmission
+    Adds the column NEXT_ADMITTIME to the given admissions df
+    Returns df with columns SUBJECT_ID, ADMITTIME, NEXT_ADMITTIME (may be useful to keep more columns)
     """
     # Example of calculating value for column based on the previous row: https://stackoverflow.com/a/34296063/5486210
     w = Window.partitionBy('SUBJECT_ID').orderBy('ADMITTIME')
-    admissions = admissions.select('SUBJECT_ID', 'ADMITTIME', lag('ADMITTIME').over(w).alias('PREV_ADMITTIME'))
+    admissions = admissions.select('SUBJECT_ID', 'ADMITTIME', lead('ADMITTIME').over(w).alias('NEXT_ADMITTIME'))
     return admissions
 
-def count_readmissions(admissions, days):
+def label_readmissions(admissions, days):
     """
-    Counts the number of readmissions in the dataset 
-    @param admissions : should contain ADMITTIME and PREV_ADMITTIME columns (PREV_ADMITTIME may be null if there was no previous admission)
+    Adds a label to each admission indicating whether the next admission is a readmission within 'days' days. 
+    1=next admission is readmission, 0=no next admission, or next admission after 'days' days
+    @param admissions : should contain ADMITTIME and NEXT_ADMITTIME columns (NEXT_ADMITTIME may be null if there was no previous admission)
     @param days : the max number of days between admissions during which the latter is counted as a readmission
+    @return readmissions df
     """
-    admissions = admissions.dropna()
-    admissions = admissions.withColumn('days_between_admissions', datediff(col('ADMITTIME'), col('PREV_ADMITTIME')))
-    count = admissions.where(col('days_between_admissions') < days).count()
-    return count
+    readmissions = admissions.withColumn('LABEL',
+        when(col('NEXT_ADMITTIME').isNull(), 0) # if there is no next admission, 0
+        .when(datediff(col('NEXT_ADMITTIME'), col('ADMITTIME')) < days, 1) # if next admission date < 'days' days after this admission, 1
+        .otherwise(0) # otherwise (next admission more than 'days' days after this admission), 0
+    # TODO: take ADMISSION_TYPE into account
+    return readmissions 
 
 if __name__ == '__main__':
     admissions, noteevents = load_data()
     admissions.printSchema()
     admissions.show()
     noteevents.show()
-    prev_admit = add_prev_admittime(admissions)
-    prev_admit.show()
-    readmission_count = count_readmissions(prev_admit, days=30)
+    next_admit = add_next_admittime(admissions)
+    next_admit.show()
+    readmissions = label_readmissions(next_admit, days=30)
+
+    readmission_count = readmissions.where(col('LABEL') == 1).count()
     total_admission_count = admissions.count() 
-    total_admission_count2 = prev_admit.count() 
-    print('***Readmissions count:', readmission_count)
-    print('***Total admissions count:', total_admission_count, total_admission_count2)
+    print('***Readmissions count:', readmission_count) 
+    print('***Total admissions count:', total_admission_count)
     print('***Readmission rate:', float(readmission_count) / total_admission_count) 
