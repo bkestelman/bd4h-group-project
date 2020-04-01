@@ -49,6 +49,7 @@ def label_readmissions(admissions, days):
         .when(col('NEXT_ADMISSION_TYPE') != 'EMERGENCY', 0) # if next admission is not an emergency, don't count as an unplanned readmission
         .when(datediff(col('NEXT_ADMITTIME'), col('ADMITTIME')) < days, 1) # if next admission date < 'days' days after this admission, 1
         .otherwise(0) # otherwise (next admission more than 'days' days after this admission), 0
+        )
     return readmissions 
 
 if __name__ == '__main__':
@@ -56,9 +57,10 @@ if __name__ == '__main__':
     admissions.printSchema()
     admissions.show()
     noteevents.show()
-    next_admit = add_next_admittime(admissions)
+    next_admit = add_next_admission(admissions)
     next_admit.show()
     readmissions = label_readmissions(next_admit, days=30)
+    readmissions.where(~col('NEXT_ADMITTIME').isNull()).show()
 
     readmission_count = readmissions.where(col('LABEL') == 1).count()
     total_admission_count = admissions.count() 
