@@ -9,6 +9,7 @@ import nltk_for_spark
 
 sc = SparkContext(master='yarn', appName='LoadData')
 sc.addPyFile('nltk_tokenizer.py')
+sc.addPyFile('nltk_for_spark.py')
 #sc.addPyFile('packages.zip')
 spark = SparkSession.builder.appName("LoadData").getOrCreate()
 
@@ -76,3 +77,5 @@ if __name__ == '__main__':
 
     noteevents = nltk_for_spark.tokenize_words(noteevents, 'TEXT')
     noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED').show()
+    noteevents = nltk_for_spark.add_bag_of_words(noteevents, 'TEXT_TOKENIZED')
+    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'BAG_OF_WORDS').show()
