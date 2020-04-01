@@ -23,14 +23,17 @@ def load_data():
 
     return admissions, noteevents
 
-def add_next_admittime(admissions):
+def add_next_admission(admissions):
     """
-    Adds the column NEXT_ADMITTIME to the given admissions df
-    Returns df with columns SUBJECT_ID, ADMITTIME, NEXT_ADMITTIME (may be useful to keep more columns)
+    Adds the columns NEXT_ADMITTIME and NEXT_ADMISSION_TYPE to the given admissions df
+    Returns df with columns SUBJECT_ID, ADMITTIME, NEXT_ADMITTIME, NEXT_ADMISSION_TYPE (may be useful to keep more columns in future)
     """
     # Example of calculating value for column based on the previous row: https://stackoverflow.com/a/34296063/5486210
     w = Window.partitionBy('SUBJECT_ID').orderBy('ADMITTIME')
-    admissions = admissions.select('SUBJECT_ID', 'ADMITTIME', lead('ADMITTIME').over(w).alias('NEXT_ADMITTIME'))
+    admissions = admissions.select('SUBJECT_ID', 'ADMITTIME', 
+            lead('ADMITTIME').over(w).alias('NEXT_ADMITTIME'),
+            lead('ADMISSION_TYPE').over(w).alias('NEXT_ADMISSION_TYPE'),
+            )
     return admissions
 
 def label_readmissions(admissions, days):
@@ -43,9 +46,9 @@ def label_readmissions(admissions, days):
     """
     readmissions = admissions.withColumn('LABEL',
         when(col('NEXT_ADMITTIME').isNull(), 0) # if there is no next admission, 0
+        .when(col('NEXT_ADMISSION_TYPE') != 'EMERGENCY', 0) # if next admission is not an emergency, don't count as an unplanned readmission
         .when(datediff(col('NEXT_ADMITTIME'), col('ADMITTIME')) < days, 1) # if next admission date < 'days' days after this admission, 1
         .otherwise(0) # otherwise (next admission more than 'days' days after this admission), 0
-    # TODO: take ADMISSION_TYPE into account
     return readmissions 
 
 if __name__ == '__main__':
