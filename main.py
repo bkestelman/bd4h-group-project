@@ -1,6 +1,6 @@
 """Loads ADMISSIONS and NOTEEVENTS from S3"""
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import lag, col
+from pyspark.sql.functions import lag, col, datediff
 from pyspark.sql.window import Window
 
 import config
@@ -12,6 +12,7 @@ def load_data():
         .option('header', 'true')
         .load(config.path_to_mimic + 'ADMISSIONS.csv.gz')
     )
+    admissions = admissions.withColumn('ADMITTIME', col('ADMITTIME').cast('date')) # cast ADMITTIME from string to date
 
     noteevents = (spark.read.format('csv')
         .option('header', 'true')
@@ -33,9 +34,27 @@ def add_prev_admittime(admissions):
     admissions = admissions.select('SUBJECT_ID', 'ADMITTIME', lag('ADMITTIME').over(w).alias('PREV_ADMITTIME'))
     return admissions
 
+def count_readmissions(admissions, days):
+    """
+    Counts the number of readmissions in the dataset 
+    @param admissions : should contain ADMITTIME and PREV_ADMITTIME columns (PREV_ADMITTIME may be null if there was no previous admission)
+    @param days : the max number of days between admissions during which the latter is counted as a readmission
+    """
+    admissions = admissions.dropna()
+    admissions = admissions.withColumn('days_between_admissions', datediff(col('ADMITTIME'), col('PREV_ADMITTIME')))
+    count = admissions.where(col('days_between_admissions') < days).count()
+    return count
+
 if __name__ == '__main__':
     admissions, noteevents = load_data()
+    admissions.printSchema()
     admissions.show()
     noteevents.show()
     prev_admit = add_prev_admittime(admissions)
     prev_admit.show()
+    readmission_count = count_readmissions(prev_admit, days=30)
+    total_admission_count = admissions.count() 
+    total_admission_count2 = prev_admit.count() 
+    print('***Readmissions count:', readmission_count)
+    print('***Total admissions count:', total_admission_count, total_admission_count2)
+    print('***Readmission rate:', float(readmission_count) / total_admission_count) 
