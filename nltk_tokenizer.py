@@ -7,7 +7,7 @@ nltk.download('stopwords') # download stopwords
 #nltk.download('punkt') # download tokenizer
 
 stopwords = set(nltk_stopwords.words('english')) # this stopwords list can be expanded if needed
-words_only_tokenizer = nltk.RegexpTokenizer(r'\w+') # tokenize words only (no punctuation or numbers)
+words_only_tokenizer = nltk.RegexpTokenizer(r'\w+') # tokenize words only (no punctuation, although numbers apparently are counted)
 
 def extract_words(text):
     """@return list of words in text, with punctuation removed"""
@@ -23,6 +23,9 @@ def remove_stopwords(words):
     @return list of words with stopwords removed
     """
     return [word for word in words if word not in stopwords]
+
+def tokenize_words(text):
+    return remove_stopwords(extract_words(text))
 
 if __name__ == '__main__':
     text = "Hello. This is some text to test out nltk's word tokenizer. Let's see how it does, shall we?"
