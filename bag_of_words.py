@@ -1,8 +1,5 @@
-import nltk
 from pyspark.sql.functions import col, when, udf
 from pyspark.ml.feature import CountVectorizer, Tokenizer, RegexTokenizer, StopWordsRemover
-
-import nltk_tokenizer
 
 def tokenize(df, text_col):
     tokenizer = RegexTokenizer(inputCol=text_col, outputCol='RAW_TOKENS', pattern='\\W')
