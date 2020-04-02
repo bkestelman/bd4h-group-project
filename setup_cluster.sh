@@ -1,9 +1,6 @@
 ### Installs pip dependencies on all hosts in the cluster
-# Prerequisites: The master needs to be able to ssh to the workers. One way to do this is to copy 
-# your EC2 private key to the master, but it's more secure to use ssh agent forwarding instead.
-# To set this up, run the following on your home computer from a git bash shell:
-# eval "$(ssh-agent -s)"
-# ssh-add /path/to/EC2/key MASTER_HOST # replace MASTER_HOST with the master hostname you ssh to
+# Prerequisites: The master needs to be able to ssh to the workers. Make sure you've set up 
+# agent-forwarding as described in the README. 
 
 CLUSTER_HOSTS_FILE=cluster_hosts.txt
 
