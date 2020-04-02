@@ -3,8 +3,11 @@
 ## Setup
 The following setup steps need to be performed every time you launch a new cluster.
 
+### Change the S3 Path
+Modify config.py to point to the mimic dataset in your S3 bucket (unless we figure out how to share buckets). 
+
 ### Set up SSH Agent-Forwarding
-First, we need to ensure the master host can ssh to the workers (required to install the Spark 
+We need to ensure the master host can ssh to the workers (required to install the Spark 
 application's python dependencies). 
 
 One way to do this is to copy your EC2 private key to the master, but it's more secure to use ssh 
