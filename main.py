@@ -6,11 +6,13 @@ from pyspark.sql.window import Window
 
 import config
 import nltk_for_spark 
+import bag_of_words
 
-sc = SparkContext(master='yarn', appName='LoadData')
+sc = SparkContext(master='yarn', appName='LoadData') #TODO: make a better app name xD
+### Add local modules here (TODO: move this to a separate config file)
 sc.addPyFile('nltk_tokenizer.py')
 sc.addPyFile('nltk_for_spark.py')
-#sc.addPyFile('packages.zip')
+sc.addPyFile('bag_of_words.py')
 spark = SparkSession.builder.appName("LoadData").getOrCreate()
 
 def load_data():
@@ -75,7 +77,7 @@ if __name__ == '__main__':
 #    print('***Total admissions count:', total_admission_count)
 #    print('***Readmission rate:', float(readmission_count) / total_admission_count) 
 
-    noteevents = nltk_for_spark.tokenize_words(noteevents, 'TEXT')
+    noteevents = bag_of_words.tokenize(noteevents, 'TEXT')
     noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED').show()
-    noteevents = nltk_for_spark.add_bag_of_words(noteevents, 'TEXT_TOKENIZED')
-    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'BAG_OF_WORDS').show()
+    noteevents = bag_of_words.add_bag_of_words(noteevents, 'TEXT_TOKENIZED')
+    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'FEATURES').show()
