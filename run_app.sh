@@ -1,0 +1,11 @@
+### Run the application with spark-submit
+# Adds necessary configuration such as python version
+# You can still pass options to spark-submit by passing them to this script
+
+APP=main.py
+PYTHON=python3
+
+export PYSPARK_PYTHON=${PYTHON}
+export PYSPARK_DRIVER_PYTHON=${PYTHON}
+
+spark-submit $@ ${APP}
