@@ -41,17 +41,18 @@ lemmatizer = (LemmatizerModel.pretrained(lemmatizer_name, lang=lang)
 
 finisher = Finisher().setInputCols(['lemmas'])
 
-word_embeddings = Word2Vec(minCount=0, inputCol='finished_lemmas', outputCol='embeddings')
+word_vector_size=5
+word_embeddings = Word2Vec(vectorSize=word_vector_size, minCount=0, inputCol='finished_lemmas', outputCol='embeddings')
 
 pipe = Pipeline(stages=[
     doc_assembler,
     tokenizer,
     lemmatizer,
     finisher,
-    #word_embeddings,
+    word_embeddings,
     ])
 
-processed = pipe.fit(df).transform(df)
-
-model = word_embeddings.fit(processed)
-model.getVectors().show()
+model = pipe.fit(df)
+#model = word_embeddings.fit(processed)
+model.stages[4].getVectors().show(truncate=False)
+model.transform(df).show(truncate=False)
