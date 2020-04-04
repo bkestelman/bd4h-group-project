@@ -42,7 +42,6 @@ sh setup_cluster.sh
 
 ## Running the Application
 ```
-spark-submit --packages com.johnsnowlabs.nlp:spark-nlp_2.11:2.4.5 nlp_pipeline.py 
+sh run_app.sh
 ```
-TODO: see if there's a way to include the sparknlp package without having to pass it as a command line option
 TODO: add instructions for testing specific functions once we have unit tests ready

@@ -1,14 +1,13 @@
-from pyspark.sql.functions import col, when, udf
-from pyspark.ml.feature import CountVectorizer, Tokenizer, RegexTokenizer, StopWordsRemover
+from pyspark.ml import Pipeline
+from nlp_preprocessing_tools import NoPuncTokenizer, StopWordsRemover 
 
-def tokenize(df, text_col):
-    tokenizer = RegexTokenizer(inputCol=text_col, outputCol='RAW_TOKENS', pattern='\\W')
-    result = tokenizer.transform(df)
-    remover = StopWordsRemover(inputCol='RAW_TOKENS', outputCol=text_col+'_TOKENIZED')
-    return remover.transform(result)
-
-def add_bag_of_words(df, words_col):
-    cv = CountVectorizer(inputCol=words_col, outputCol='FEATURES')
-    model = cv.fit(df)
-    result = model.transform(df)
-    return result
+def BagOfWords(inputCol, outputCol):
+    tokenizer = NoPuncTokenizer(inputCol=text_col, outputCol='RAW_TOKENS')
+    stopWordsRemover = StopWordsRemover(inputCol='RAW_TOKENS', outputCol='TOKENS')
+    countVectorizer = CountVectorizer(inputCol='TOKENS', outputCol=outputCol)
+    pipe = Pipeline(stages=[
+        tokenizer,
+        stopWordsRemover,
+        countVectorizer,
+        ])
+    return pipe
