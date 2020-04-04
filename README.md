@@ -42,6 +42,6 @@ sh setup_cluster.sh
 
 ## Running the Application
 ```
-spark-submit main.py
+sh run_app.sh
 ```
 TODO: add instructions for testing specific functions once we have unit tests ready
