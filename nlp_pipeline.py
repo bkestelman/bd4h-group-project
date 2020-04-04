@@ -1,10 +1,11 @@
 from pyspark.sql import SparkSession
 from pyspark.ml import Pipeline
+from pyspark.ml.feature import Word2Vec
 
 import sparknlp
 from sparknlp.base import DocumentAssembler, Finisher
 from sparknlp.annotator import Tokenizer
-from sparknlp.pretrained import LemmatizerModel
+from sparknlp.pretrained import LemmatizerModel, BertEmbeddings, ElmoEmbeddings
 
 spark = SparkSession.builder.appName('NLP Pipeline').getOrCreate()
 
@@ -27,13 +28,30 @@ lemmatizer = (LemmatizerModel.pretrained(lemmatizer_name, lang=lang)
         .setOutputCol('lemmas')
         )
 
+# BERT is a state of the art pretrained word embedding model
+# Couldn't test locally - ran out of memory. May be worthwhile testing on the cluster
+#word_embeddings = (BertEmbeddings.pretrained('bert_base_cased', lang=lang)
+#    .setInputCols(['lemmas'])
+#    .setOutputCols('embeddings')
+#    )
+#word_embeddings = (ElmoEmbeddings.pretrained('elmo', lang=lang)
+#        .setInputCols(['lemmas'])
+#        .setOutputCols('embeddings')
+#    )
+
 finisher = Finisher().setInputCols(['lemmas'])
+
+word_embeddings = Word2Vec(minCount=0, inputCol='finished_lemmas', outputCol='embeddings')
 
 pipe = Pipeline(stages=[
     doc_assembler,
     tokenizer,
     lemmatizer,
     finisher,
+    #word_embeddings,
     ])
 
-pipe.fit(df).transform(df).show(truncate=False)
+processed = pipe.fit(df).transform(df)
+
+model = word_embeddings.fit(processed)
+model.getVectors().show()
