@@ -6,11 +6,13 @@ from pyspark.sql.window import Window
 
 import config
 from bag_of_words import BagOfWords 
+from word2vec import BasicWord2Vec
 
 sc = SparkContext(master='yarn', appName='LoadData') #TODO: make a better app name xD
 ### Add local modules here (TODO: move this to a separate config file)
 sc.addPyFile('bag_of_words.py')
 sc.addPyFile('nlp_preprocessing_tools.py')
+sc.addPyFile('word2vec.py')
 spark = SparkSession.builder.appName("LoadData").getOrCreate()
 
 def load_data():
@@ -64,6 +66,7 @@ if __name__ == '__main__':
     noteevents.printSchema()
     admissions.show()
     noteevents.show()
+    sample_noteevents = noteevents.head(1000)
 #    next_admit = add_next_admission(admissions)
 #    next_admit.show()
 #    readmissions = label_readmissions(next_admit, days=30)
@@ -80,5 +83,15 @@ if __name__ == '__main__':
 #    noteevents = bag_of_words.add_bag_of_words(noteevents, 'TEXT_TOKENIZED')
 #    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'FEATURES').show()
 
-    bagOfWordsModel = BagOfWords(inputCol='TEXT', outputCol='FEATURES').fit(noteevents)
-    bagOfWordsResults = bagOfWordsModel.transform(noteevents)
+    bagOfWordsModel = BagOfWords(inputCol='TEXT', outputCol='FEATURES').fit(sample_noteevents)
+    bagOfWordsResults = bagOfWordsModel.transform(sample_noteevents)
+    print('***Bag of Words***')
+    bagOfWordsResults.show()
+
+    vectorSize=50
+    word2vecModel = BasicWord2Vec(inputCol='TEXT', outputCol='FEATURES', minCount=0, vectorSize=vectorSize).fit(sample_noteevents)
+    word2vecResults = word2vecModel.transform(sample_noteevents)
+    print('***Word2Vec***')
+    word2vecResults.show()
+    print('***Word Vectors***')
+    word2vecResults.stages[len(word2vecResults.stages)-1].getVectors().show(truncate=False)
