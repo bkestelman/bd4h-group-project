@@ -3,6 +3,10 @@
 ## Setup
 The following setup steps need to be performed every time you launch a new cluster.
 
+Note python3 is now required for sparknlp (this is taken care of in the setup_cluster.sh and run_app.sh scripts).
+
+Note you should now run the application using run_app.sh instead of spark-submit for it to be configured correctly. You can still pass options to spark-submit by passing them to run_app.sh instead. 
+
 ### Change the S3 Path
 Modify config.py to point to the mimic dataset in your S3 bucket (unless we figure out how to share buckets). 
 
@@ -42,7 +46,6 @@ sh setup_cluster.sh
 
 ## Running the Application
 ```
-spark-submit --packages com.johnsnowlabs.nlp:spark-nlp_2.11:2.4.5 nlp_pipeline.py 
+sh run_app.sh
 ```
-TODO: see if there's a way to include the sparknlp package without having to pass it as a command line option
 TODO: add instructions for testing specific functions once we have unit tests ready
