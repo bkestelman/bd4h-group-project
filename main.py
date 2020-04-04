@@ -5,14 +5,12 @@ from pyspark.sql.functions import col, when, lag, lead, datediff
 from pyspark.sql.window import Window
 
 import config
-import nltk_for_spark 
-import bag_of_words
+from bag_of_words import BagOfWords 
 
 sc = SparkContext(master='yarn', appName='LoadData') #TODO: make a better app name xD
 ### Add local modules here (TODO: move this to a separate config file)
-sc.addPyFile('nltk_tokenizer.py')
-sc.addPyFile('nltk_for_spark.py')
 sc.addPyFile('bag_of_words.py')
+sc.addPyFile('nlp_preprocessing_tools.py')
 spark = SparkSession.builder.appName("LoadData").getOrCreate()
 
 def load_data():
@@ -77,7 +75,10 @@ if __name__ == '__main__':
 #    print('***Total admissions count:', total_admission_count)
 #    print('***Readmission rate:', float(readmission_count) / total_admission_count) 
 
-    noteevents = bag_of_words.tokenize(noteevents, 'TEXT')
-    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED').show()
-    noteevents = bag_of_words.add_bag_of_words(noteevents, 'TEXT_TOKENIZED')
-    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'FEATURES').show()
+#    noteevents = bag_of_words.tokenize(noteevents, 'TEXT')
+#    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED').show()
+#    noteevents = bag_of_words.add_bag_of_words(noteevents, 'TEXT_TOKENIZED')
+#    noteevents.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'FEATURES').show()
+
+    bagOfWordsModel = BagOfWords(inputCol='TEXT', outputCol='FEATURES').fit(noteevents)
+    bagOfWordsResults = bagOfWordsModel.transform(noteevents)
