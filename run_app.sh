@@ -6,7 +6,7 @@
 APP=main.py
 PYTHON=python3
 SPARK_NLP_PKG='com.johnsnowlabs.nlp:spark-nlp_2.11:2.4.5'
-PACAKAGES=${SPARK_NLP_PKG} # packages should be comma-separated with no whitespace
+PACKAGES=${SPARK_NLP_PKG} # packages should be comma-separated with no whitespace
 
 # Set python version
 export PYSPARK_PYTHON=${PYTHON}

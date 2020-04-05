@@ -4,9 +4,9 @@ from pyspark.ml.feature import Word2Vec
 from nlp_preprocessing_tools import RawTokenizer, Lemmatizer, Finisher
 
 def BasicWord2Vec(inputCol, outputCol, **kwargs):
-    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='_tokens') 
-    finisher = Finisher(inputCol='_tokens', outputCol='tokens')
-    word2vec = Word2Vec(inputCol=inputCol, outputCol=outputCol, **kwargs)
+    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='tokens') 
+    finisher = Finisher(inputCol='tokens', outputCol='finished_tokens') 
+    word2vec = Word2Vec(inputCol='finished_tokens', outputCol=outputCol, **kwargs)
     pipe = Pipeline(stages=[
         tokenizer,
         finisher,
