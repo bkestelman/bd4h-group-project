@@ -10,7 +10,8 @@ import bag_of_words
 import os, time, shutil
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+# TODO: does not make it to AWS pyspark, even though installed via requirements.txt. pip vs pip3 problem?
 
 sc = SparkContext(master=config.spark_master, appName=config.spark_app_name)
 
@@ -194,25 +195,25 @@ def do_lr(train, test):
     model = lr.fit(train)
     training_summary = model.summary
 
-    roc = training_summary.roc.toPandas()
-    plt.plot(roc['FPR'], roc['TPR'])
-    plt.ylabel('False Positive Rate')
-    plt.xlabel('True Positive Rate')
-    plt.title('ROC Curve')
-    plt.show()
-    print('Training set areaUnderROC: ' + str(training_summary.areaUnderROC))
-
-    pr = training_summary.pr.toPandas()
-    plt.plot(pr['recall'], pr['precision'])
-    plt.ylabel('Precision')
-    plt.xlabel('Recall')
-    plt.show()
+    # roc = training_summary.roc.toPandas()
+    # plt.plot(roc['FPR'], roc['TPR'])
+    # plt.ylabel('False Positive Rate')
+    # plt.xlabel('True Positive Rate')
+    # plt.title('ROC Curve')
+    # plt.show()
+    # print('Training set areaUnderROC: ' + str(training_summary.areaUnderROC))
+    #
+    # pr = training_summary.pr.toPandas()
+    # plt.plot(pr['recall'], pr['precision'])
+    # plt.ylabel('Precision')
+    # plt.xlabel('Recall')
+    # plt.show()
 
     predict_train = model.transform(train)
     predictions = model.transform(test)
-    predictions.select('Outcome', 'prediction').show(10)
 
     evaluator = BinaryClassificationEvaluator()
+    print('Train Area Under ROC', evaluator.evaluate(predict_train))
     print('Test Area Under ROC', evaluator.evaluate(predictions))
 
 
@@ -239,15 +240,14 @@ if __name__ == '__main__':
         csv_df.printSchema()
         csv_df.repartition(1).write.csv('dataset_input', header=True)
 
+    # logistic regression: mpatel364 - memory errors when running logistic regression locally
     # dataset_w_features.repartition(3000)
-    # logistic regression
     print('splitting dataset into train & test')
     train, test = dataset_w_features.randomSplit([0.8, 0.2], seed=40**3)
     print('starting logistic regression...')
     do_lr(train, test)
 
     print('run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
-
     # print('training dataset count: ', train.count())
     # print('test dataset count: ', test.count())
     # training dataset count:  42178

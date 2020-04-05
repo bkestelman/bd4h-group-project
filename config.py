@@ -8,7 +8,8 @@ dump_dataset = False
 run_on_aws = True if os.getenv('RUN_ON_AWS', 'true').lower() in ['true', 'yes'] else False
 
 if run_on_aws:
-    path_to_mimic = 's3://cse6250-bucket/mimic-iii-clinical-database-1.4/'
+    # path_to_mimic = 's3://cse6250-bucket/mimic-iii-clinical-database-1.4/'
+    path_to_mimic = 's3://mpatel364-bd4h/mimic-iii-clinical-database-1.4/'
     spark_master = 'yarn'
 else:  # local run
     path_to_mimic = '../mimic-iii-clinical-database-1.4/'  # update this to path to MIMIC locally
