@@ -212,9 +212,11 @@ def do_lr(train, test):
     predict_train = model.transform(train)
     predictions = model.transform(test)
 
-    evaluator = BinaryClassificationEvaluator()
+    evaluator = BinaryClassificationEvaluator().setLabelCol('LABEL')
     print('Train Area Under ROC', evaluator.evaluate(predict_train))
     print('Test Area Under ROC', evaluator.evaluate(predictions))
+    # Train Area Under ROC 0.9999999557292707
+    # Test Area Under ROC 0.615184213495825
 
 
 if __name__ == '__main__':
