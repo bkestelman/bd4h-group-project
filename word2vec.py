@@ -1,12 +1,15 @@
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import Word2Vec
+from utils import timeit
 
 from nlp_preprocessing_tools import RawTokenizer, Lemmatizer, Finisher
+from hyperparameters import word2vec_params
 
-def BasicWord2Vec(inputCol, outputCol, **kwargs):
-    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='tokens') 
-    finisher = Finisher(inputCol='tokens', outputCol='finished_tokens') 
-    word2vec = Word2Vec(inputCol='finished_tokens', outputCol=outputCol, **kwargs)
+@timeit
+def BasicWord2Vec(inputCol, outputCol):
+    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+    finisher = Finisher(inputCol='TOKENS', outputCol='FINISHED_TOKENS') 
+    word2vec = Word2Vec(inputCol='FINISHED_TOKENS', outputCol=outputCol, minCount=0, vectorSize=word2vec_params['vectorSize']) #TODO: move vectorSize to config
     pipe = Pipeline(stages=[
         tokenizer,
         finisher,
