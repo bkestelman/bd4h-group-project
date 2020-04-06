@@ -3,8 +3,7 @@ import os
 spark_app_name = 'LoadData'  # TODO: make a better app name xD
 debug_print = False
 dump_dataset = False
-# Only use part of the data (i.e. for testing)
-use_sample = False 
+sample_run = True # use only a sample of the data (applies after preprocessing, otherwise we can have a situation where very few of the samples are actually discharge summaries)
 sample_size = 1000
 
 # to run locally, set env var RUN_ON_AWS=False, defaults to true
@@ -20,4 +19,4 @@ else:  # local run
     spark_master = 'local[*]'
 
 #sc_py_files = ['bag_of_words.py', 'word2vec.py', 'nlp_preprocessing_tools.py']
-sc_py_files = []
+sc_py_files = [] # for some reason everything is working now without adding py_files...? 

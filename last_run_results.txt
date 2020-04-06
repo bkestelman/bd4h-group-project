@@ -1,0 +1,20 @@
+function [load_data] finished in 7.42 seconds
+function [add_next_admission] finished in 0.09 seconds
+function [label_readmissions] finished in 0.04 seconds
+function [preprocess_data] finished in 0.26 seconds
+Adding features using BagOfWords
+function [add_features] finished in 147.50 seconds
+splitting dataset into train & test
+starting logistic regression...
+Train Area Under ROC 0.9999999557292706
+Test Area Under ROC 0.6151835082374181
+function [do_lr] finished in 287.29 seconds
+run completed in 7.38 minutes
+Adding features using BasicWord2Vec
+function [add_features] finished in 82.99 seconds
+splitting dataset into train & test
+starting logistic regression...
+Train Area Under ROC 0.6853027007432243
+Test Area Under ROC 0.642688821184082
+function [do_lr] finished in 403.62 seconds
+run completed in 15.49 minutes

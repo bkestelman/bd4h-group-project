@@ -2,21 +2,8 @@ from utils import timeit
 
 from bag_of_words import BagOfWords
 from word2vec import BasicWord2Vec
+from hyperparameters import fit_limits 
 import config
-
-#    bagOfWords = BagOfWords(inputCol='TEXT', outputCol='FEATURES').fit(sample_noteevents)
-#    bagOfWordsResults = bagOfWords.transform(sample_noteevents)
-#    print('***Bag of Words***')
-#    bagOfWordsResults.show()
-#
-#    vectorSize=50
-#    word2vec = BasicWord2Vec(inputCol='TEXT', outputCol='FEATURES', minCount=0, vectorSize=vectorSize)
-#    word2vecModel = word2vec.fit(sample_noteevents)
-#    word2vecResults = word2vecModel.transform(sample_noteevents)
-#    print('***Word2Vec***')
-#    word2vecResults.show()
-#    print('***Word Vectors***')
-#    word2vecModel.stages[2].getVectors().show(truncate=False)
 
 @timeit
 def add_features(dataset, features_builder):
@@ -25,8 +12,14 @@ def add_features(dataset, features_builder):
     @param features_builder : a Spark Pipeline containing the stages required to build the features
     @return dataset with added column 'FEATURES'
     """
+    print('Adding features using', features_builder.__name__)
 
-    pipelineModel = features_builder(inputCol='TEXT', outputCol='FEATURES').fit(dataset)
+    if features_builder.__name__ == 'BasicWord2Vec':
+        fit_dataset = dataset.limit(fit_limits['word2vec']) # Word2Vec gets much slower as the dataset grows, so we can only use part of it to create the word vectors
+    else:
+        fit_dataset = dataset
+
+    pipelineModel = features_builder(inputCol='TEXT', outputCol='FEATURES').fit(fit_dataset)
     dataset_w_features = pipelineModel.transform(dataset)
 
     if config.debug_print:

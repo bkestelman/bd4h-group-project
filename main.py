@@ -145,7 +145,6 @@ def preprocess_data(admissions, noteevents):
 
     return dataset_labeled
 
-
 @timeit
 def add_next_admission(admissions):
     """
@@ -178,24 +177,6 @@ def label_readmissions(admissions, days):
         )
     return readmissions 
 
-#@timeit
-#def add_features(dataset, features_builder):
-#
-#    prepared = features_builder.fit(dataset)
-#    dataset_w_features = features_builder.transform(dataset)
-#
-##    text_tokenized = bag_of_words.tokenize(dataset, 'TEXT')
-##    dataset_w_features = bag_of_words.add_bag_of_words(text_tokenized, 'TEXT_TOKENIZED')
-#
-#    if config.debug_print:
-#        print('tokenizer')
-#        text_tokenized.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED').show()
-#
-#        print('features')
-#        dataset_w_features.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'FEATURES').show()
-#
-#    return dataset_w_features
-
 @timeit
 def do_lr(train, test):
     # https://medium.com/@dhiraj.p.rai/logistic-regression-in-spark-ml-8a95b5f5434c
@@ -227,7 +208,6 @@ def do_lr(train, test):
     # Train Area Under ROC 0.9999999557292707
     # Test Area Under ROC 0.615184213495825
 
-
 if __name__ == '__main__':
 
     t_start = time.time()
@@ -235,34 +215,19 @@ if __name__ == '__main__':
     admissions, noteevents = load_data()
 
     labeled_dataset = preprocess_data(admissions, noteevents)
-
-#=======
-#    bagOfWords = BagOfWords(inputCol='TEXT', outputCol='FEATURES').fit(sample_noteevents)
-#    bagOfWordsResults = bagOfWords.transform(sample_noteevents)
-#    print('***Bag of Words***')
-#    bagOfWordsResults.show()
-#
-#    vectorSize=50
-#    word2vec = BasicWord2Vec(inputCol='TEXT', outputCol='FEATURES', minCount=0, vectorSize=vectorSize)
-#    word2vecModel = word2vec.fit(sample_noteevents)
-#    word2vecResults = word2vecModel.transform(sample_noteevents)
-#    print('***Word2Vec***')
-#    word2vecResults.show()
-#    print('***Word Vectors***')
-#    word2vecModel.stages[2].getVectors().show(truncate=False)
-#=======
+    if config.sample_run:
+        labeled_dataset = labeled_dataset.limit(config.sample_size)
+    labeled_dataset.cache() # HUGE performance improvement by caching!
 
     features_builders = [
-        #BagOfWords,
+        BagOfWords,
         BasicWord2Vec,
         ]
 
     for features_builder in features_builders: 
-        print('***', features_builder.__name__)
-        if config.use_sample:
-            admissions = admissions.limit(config.sample_size)
-            noteevents = noteevents.limit(config.sample_size)
         dataset_w_features = add_features(labeled_dataset, features_builder)
+        dataset_w_features.cache()
+        #dataset_w_features.show()
 
         if config.dump_dataset:
             csv_dump_dir = 'dataset_input'
@@ -283,6 +248,8 @@ if __name__ == '__main__':
         # dataset_w_features.repartition(3000)
         print('splitting dataset into train & test')
         train, test = dataset_w_features.randomSplit([0.8, 0.2], seed=40**3)
+        train.cache()
+        test.cache()
         print('starting logistic regression...')
         do_lr(train, test)
 
