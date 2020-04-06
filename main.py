@@ -4,18 +4,23 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count
 from pyspark.sql.window import Window
 from utils import timeit
-import config
-import nltk_for_spark 
-import bag_of_words
 import os, time, shutil
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
 # import matplotlib.pyplot as plt
 # TODO: does not make it to AWS pyspark, even though installed via requirements.txt. pip vs pip3 problem?
 
+from bag_of_words import BagOfWords 
+from word2vec import BasicWord2Vec
+from build_features import add_features
+
+import config
+
+#from nlp_preprocessing_tools import NoPuncTokenizer, StopWordsRemover
+#from pyspark.ml.feature import CountVectorizer, RegexTokenizer
+
 sc = SparkContext(master=config.spark_master, appName=config.spark_app_name)
 
-# Add local modules here
 spark = SparkSession.builder.appName(config.spark_app_name).getOrCreate()
 sc.setLogLevel('WARN')
 
@@ -23,6 +28,7 @@ sc.setLogLevel('WARN')
 # spark = SparkSession.builder.appName(config.spark_app_name).config('spark.driver.memory', '12g').getOrCreate()
 # print(sc.getConf().getAll())
 
+# Add local modules here
 for sc_py_file in config.sc_py_files:
     sc.addPyFile(sc_py_file)
 
@@ -139,7 +145,6 @@ def preprocess_data(admissions, noteevents):
 
     return dataset_labeled
 
-
 @timeit
 def add_next_admission(admissions):
     """
@@ -173,21 +178,6 @@ def label_readmissions(admissions, days):
     return readmissions 
 
 @timeit
-def add_features(dataset):
-
-    text_tokenized = bag_of_words.tokenize(dataset, 'TEXT')
-    dataset_w_features = bag_of_words.add_bag_of_words(text_tokenized, 'TEXT_TOKENIZED')
-
-    if config.debug_print:
-        print('tokenizer')
-        text_tokenized.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED').show()
-
-        print('features')
-        dataset_w_features.select('SUBJECT_ID', 'TEXT', 'TEXT_TOKENIZED', 'FEATURES').show()
-
-    return dataset_w_features
-
-@timeit
 def do_lr(train, test):
     # https://medium.com/@dhiraj.p.rai/logistic-regression-in-spark-ml-8a95b5f5434c
 
@@ -218,39 +208,53 @@ def do_lr(train, test):
     # Train Area Under ROC 0.9999999557292707
     # Test Area Under ROC 0.615184213495825
 
-
 if __name__ == '__main__':
 
     t_start = time.time()
 
     admissions, noteevents = load_data()
+
     labeled_dataset = preprocess_data(admissions, noteevents)
-    dataset_w_features = add_features(labeled_dataset)
+    if config.sample_run:
+        labeled_dataset = labeled_dataset.limit(config.sample_size)
+    labeled_dataset.cache() # HUGE performance improvement by caching!
 
-    if config.dump_dataset:
-        csv_dump_dir = 'dataset_input'
-        if os.path.exists(csv_dump_dir) and os.path.isdir(csv_dump_dir):  # delete csv dir if exists
-            shutil.rmtree(csv_dump_dir)
+    features_builders = [
+        BagOfWords,
+        BasicWord2Vec,
+        ]
 
-        csv_df = dataset_w_features.withColumn('FEATURES_AS_STRING', col('FEATURES').cast('string'))\
-            .withColumn('TEXT_TOKENIZED_STRING', col('TEXT_TOKENIZED').cast('string')) \
-            .withColumn('RAW_TOKENS_STRING', col('RAW_TOKENS').cast('string'))
+    for features_builder in features_builders: 
+        dataset_w_features = add_features(labeled_dataset, features_builder)
+        dataset_w_features.cache()
+        #dataset_w_features.show()
 
-        csv_df = csv_df.drop('FEATURES').drop('TEXT_TOKENIZED_STRING').drop('RAW_TOKENS').drop('TEXT')
-        csv_df = csv_df['SUBJECT_ID', 'HADM_ID', 'NEXT_ADMITTIME', 'NEXT_ADMISSION_TYPE', 'NEXT_DAYS_ADMIT', 'LABEL',
-                        'FEATURES_AS_STRING']
-        csv_df.printSchema()
-        csv_df.repartition(1).write.csv('dataset_input', header=True)
+        if config.dump_dataset:
+            csv_dump_dir = 'dataset_input'
+            if os.path.exists(csv_dump_dir) and os.path.isdir(csv_dump_dir):  # delete csv dir if exists
+                shutil.rmtree(csv_dump_dir)
 
-    # logistic regression: mpatel364 - memory errors when running logistic regression locally
-    # dataset_w_features.repartition(3000)
-    print('splitting dataset into train & test')
-    train, test = dataset_w_features.randomSplit([0.8, 0.2], seed=40**3)
-    print('starting logistic regression...')
-    do_lr(train, test)
+            csv_df = dataset_w_features.withColumn('FEATURES_AS_STRING', col('FEATURES').cast('string'))\
+                .withColumn('TEXT_TOKENIZED_STRING', col('TEXT_TOKENIZED').cast('string')) \
+                .withColumn('RAW_TOKENS_STRING', col('RAW_TOKENS').cast('string'))
 
-    print('run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
-    # print('training dataset count: ', train.count())
-    # print('test dataset count: ', test.count())
-    # training dataset count:  42178
-    # test dataset count:  10548
+            csv_df = csv_df.drop('FEATURES').drop('TEXT_TOKENIZED_STRING').drop('RAW_TOKENS').drop('TEXT')
+            csv_df = csv_df['SUBJECT_ID', 'HADM_ID', 'NEXT_ADMITTIME', 'NEXT_ADMISSION_TYPE', 'NEXT_DAYS_ADMIT', 'LABEL',
+                            'FEATURES_AS_STRING']
+            csv_df.printSchema()
+            csv_df.repartition(1).write.csv('dataset_input', header=True)
+
+        # logistic regression: mpatel364 - memory errors when running logistic regression locally
+        # dataset_w_features.repartition(3000)
+        print('splitting dataset into train & test')
+        train, test = dataset_w_features.randomSplit([0.8, 0.2], seed=40**3)
+        train.cache()
+        test.cache()
+        print('starting logistic regression...')
+        do_lr(train, test)
+
+        print('run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
+        # print('training dataset count: ', train.count())
+        # print('test dataset count: ', test.count())
+        # training dataset count:  42178
+        # test dataset count:  10548
