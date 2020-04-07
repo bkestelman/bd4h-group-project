@@ -19,7 +19,7 @@ else:  # local run
     spark_master = 'local[*]'
 
 #sc_py_files = ['bag_of_words.py', 'word2vec.py', 'nlp_preprocessing_tools.py']
-sc_py_files = []
+sc_py_files = ['helper_udfs.py'] # get import error when this is not added here. Guessing this may be needed for some files depending on where they're used or if they access objects like spark or sc, but not sure
 
 save_model_paths = {
     'BasicWord2Vec': 'BasicWord2Vec.model',

@@ -7,14 +7,16 @@ from utils import timeit
 import os, time, shutil
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
+from pyspark.ml.linalg import Vectors, VectorUDT
 # import matplotlib.pyplot as plt
 # TODO: does not make it to AWS pyspark, even though installed via requirements.txt. pip vs pip3 problem?
 
 from bag_of_words import BagOfWords 
-from word2vec import BasicWord2Vec
+from word2vec import BasicWord2Vec, GloveWordEmbeddings
 from build_features import add_features
 
 import config
+import helper_udfs
 
 #from nlp_preprocessing_tools import NoPuncTokenizer, StopWordsRemover
 #from pyspark.ml.feature import CountVectorizer, RegexTokenizer
@@ -31,6 +33,9 @@ sc.setLogLevel('WARN')
 # Add local modules here
 for sc_py_file in config.sc_py_files:
     sc.addPyFile(sc_py_file)
+
+# Register UDF's
+spark.udf.register('list_to_vector_udf', helper_udfs.list_to_vector, VectorUDT())
 
 @timeit
 def load_data():
@@ -222,6 +227,7 @@ if __name__ == '__main__':
     features_builders = [
         BagOfWords,
         BasicWord2Vec,
+        GloveWordEmbeddings,
         ]
 
     for features_builder in features_builders: 
