@@ -19,4 +19,8 @@ else:  # local run
     spark_master = 'local[*]'
 
 #sc_py_files = ['bag_of_words.py', 'word2vec.py', 'nlp_preprocessing_tools.py']
-sc_py_files = [] # for some reason everything is working now without adding py_files...? 
+sc_py_files = []
+
+save_model_paths = {
+    'BasicWord2Vec': 'BasicWord2Vec.model',
+}

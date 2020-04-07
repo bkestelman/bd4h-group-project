@@ -225,7 +225,8 @@ if __name__ == '__main__':
         ]
 
     for features_builder in features_builders: 
-        dataset_w_features = add_features(labeled_dataset, features_builder)
+        save_model_path = config.save_model_paths.get(features_builder.__name__)
+        dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path)
         dataset_w_features.cache()
         #dataset_w_features.show()
 
