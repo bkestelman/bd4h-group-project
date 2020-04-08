@@ -8,6 +8,7 @@ from pyspark.sql.functions import col, when, udf
 
 import sparknlp
 import sparknlp.base
+from sparknlp.base import RecursivePipeline
 from sparknlp.annotator import Tokenizer, Stemmer, SentenceEmbeddings
 from sparknlp.pretrained import LemmatizerModel, WordEmbeddingsModel, BertEmbeddings, ElmoEmbeddings
 
@@ -23,7 +24,7 @@ def RawTokenizer(inputCol, outputCol):
         .setCleanupMode('shrink')
         )
     tokenizer = Tokenizer().setInputCols([document_col]).setOutputCol(outputCol)
-    tokenizer_pipe = Pipeline(stages=[doc_assembler, tokenizer])
+    tokenizer_pipe = RecursivePipeline(stages=[doc_assembler, tokenizer])
     return tokenizer_pipe
 
 def NoPuncTokenizer(inputCol, outputCol):
@@ -65,7 +66,7 @@ def GloveWordEmbeddings(inputCol, outputCol):
     list_to_vector = SQLTransformer(statement = '''
         SELECT *, list_to_vector_udf(UNWRAPPED_EMBEDDINGS) AS {outputCol} 
         FROM __THIS__'''.format(outputCol=outputCol))
-    embeddings_pipe = Pipeline(stages=[
+    embeddings_pipe = RecursivePipeline(stages=[
         word_embeddings, 
         document_embeddings, 
         unwrap,
