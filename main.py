@@ -187,7 +187,7 @@ def label_readmissions(admissions, days):
 def do_lr(train, test):
     # https://medium.com/@dhiraj.p.rai/logistic-regression-in-spark-ml-8a95b5f5434c
 
-    lr = LogisticRegression(featuresCol='FEATURES', labelCol='LABEL', maxIter=10)
+    lr = LogisticRegression(featuresCol='FEATURES', labelCol='LABEL', maxIter=5)
     model = lr.fit(train)
     training_summary = model.summary
 
