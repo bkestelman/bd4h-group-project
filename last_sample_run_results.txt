@@ -1,23 +1,23 @@
-function [load_data] finished in 7.22 seconds
-function [add_next_admission] finished in 0.08 seconds
-function [label_readmissions] finished in 0.11 seconds
-function [preprocess_data] finished in 0.36 seconds
+function [load_data] finished in 6.96 seconds
+function [add_next_admission] finished in 0.10 seconds
+function [label_readmissions] finished in 0.05 seconds
+function [preprocess_data] finished in 0.33 seconds
 splitting dataset into train & test
 Adding features using BagOfWords
-function [add_features] finished in 90.73 seconds
+function [add_features] finished in 77.83 seconds
 starting logistic regression...
 Train Area Under ROC 1.0
-Test Area Under ROC 0.3512233622730858
-function [do_lr] finished in 10.25 seconds
-run completed in 1.82 minutes
+Test Area Under ROC 0.4033149171270718
+function [do_lr] finished in 6.56 seconds
+run completed in 1.54 minutes
 Adding features using BasicWord2Vec
 Loading saved model from BasicWord2Vec.model
-function [add_features] finished in 6.75 seconds
+function [add_features] finished in 5.82 seconds
 starting logistic regression...
-Train Area Under ROC 0.8243786851821205
-Test Area Under ROC 0.6479873717442787
-function [do_lr] finished in 30.81 seconds
-run completed in 2.44 minutes
+Train Area Under ROC 0.8247093183446268
+Test Area Under ROC 0.6464088397790063
+function [do_lr] finished in 18.19 seconds
+run completed in 1.94 minutes
 Adding features using GloveWordEmbeddings
 glove_100d download started this may take some time.
 Approximate size to download 145.3 MB
@@ -25,9 +25,9 @@ Approximate size to download 145.3 MB
 Approximate size to download 145.3 MB
 Download done! Loading the resource.
 [OK!]
-function [add_features] finished in 9.08 seconds
+function [add_features] finished in 9.06 seconds
 starting logistic regression...
-Train Area Under ROC 0.7885600925772882
+Train Area Under ROC 0.7883396704689509
 Test Area Under ROC 0.6353591160221
-function [do_lr] finished in 134.29 seconds
-run completed in 4.83 minutes
+function [do_lr] finished in 71.33 seconds
+run completed in 3.28 minutes

@@ -1,6 +1,7 @@
 """Loads ADMISSIONS and NOTEEVENTS from S3"""
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
+from pyspark import StorageLevel
 from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count
 from pyspark.sql.window import Window
 from utils import timeit
@@ -51,7 +52,7 @@ def load_data():
         .option('multiline', 'true') # The text for the discharge summaries spans multiple lines. This option prevents Spark from treating each line as a new row
         .option('escape', '"') # The discharge summaries use a double quote as the escape character (i.e. quotes within a discharge summary are escaped as "" instead of \")
         .load(config.path_to_mimic + 'NOTEEVENTS.csv.gz')
-    ).repartition(200) # Spark reads .gz file as single partition, so we need to split to more partitions before we do any processing on this dataframe. Still playing around to find the optimal number, but 10 at least works (without repartition, was hitting memory errors during text tokenization).
+    ).repartition(20) # Spark reads .gz file as single partition, so we need to split to more partitions before we do any processing on this dataframe. Still playing around to find the optimal number, but 10 at least works (without repartition, was hitting memory errors during text tokenization).
     return admissions, noteevents
 
 @timeit
@@ -223,6 +224,7 @@ if __name__ == '__main__':
     if config.sample_run:
         labeled_dataset = labeled_dataset.limit(config.sample_size)
     labeled_dataset.cache() # HUGE performance improvement by caching!
+    #labeled_dataset.persist(StorageLevel.MEMORY_AND_DISK) 
     #labeled_dataset.groupby('HADM_ID').count().where(col('count') != 1).show() # checked that after preprocessing, HADM_ID is unique for all rows
 
     train_ids, test_ids = labeled_dataset.select(col('HADM_ID').alias('HADM_ID_SPLIT')).randomSplit([0.8, 0.2], seed=40**3) # the alias is to make joining to features smoother
@@ -236,8 +238,11 @@ if __name__ == '__main__':
 
     for features_builder in features_builders: 
         save_model_path = config.save_model_paths.get(features_builder.__name__)
-        dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path)
+        dataset_w_features = (add_features(labeled_dataset, features_builder, save_model_path)
+            .select('HADM_ID', 'FEATURES', 'LABEL')
+            )
         dataset_w_features.cache()
+        #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
 
         if config.dump_dataset:
             csv_dump_dir = 'dataset_input'

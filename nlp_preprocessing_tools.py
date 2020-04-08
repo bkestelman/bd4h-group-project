@@ -17,14 +17,18 @@ document_col = '_document' # column name to use as output for sparknlp's Documen
 def RawTokenizer(inputCol, outputCol):
     """Tokenizes words and punctuations with no frills"""
     # sparknlp's Tokenizer requires a Document type as input (created by DocumentAssembler) 
-    doc_assembler = sparknlp.base.DocumentAssembler().setInputCol(inputCol).setOutputCol(document_col)
-    tokenizer = Tokenizer().setInputCols(['_document']).setOutputCol(outputCol)
+    doc_assembler = (sparknlp.base.DocumentAssembler()
+        .setInputCol(inputCol)
+        .setOutputCol(document_col)
+        .setCleanupMode('shrink')
+        )
+    tokenizer = Tokenizer().setInputCols([document_col]).setOutputCol(outputCol)
     tokenizer_pipe = Pipeline(stages=[doc_assembler, tokenizer])
     return tokenizer_pipe
 
 def NoPuncTokenizer(inputCol, outputCol):
     """Tokenizes words and removes punctuation"""
-    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, pattern='\\W')
+    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, pattern='\\W|[0-9]')
     return tokenizer
 
 def StopWordsRemover(inputCol, outputCol):
