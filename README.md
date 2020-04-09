@@ -49,3 +49,15 @@ sh setup_cluster.sh
 sh run_app.sh
 ```
 TODO: add instructions for testing specific functions once we have unit tests ready
+
+## Using a model trained in a previous run
+If saving a model is configured in config.py (see save_model_paths), models will be saved to hdfs and loaded from there automatically.
+
+But if we want to load a model on the first run after launching a cluster, we have to upload it to hdfs. 
+
+For example, here we have the model BasicWord2Vec.Model.5000.tar.gz, which is a Word2VecModel trained on 5000 discharge summaries. To use it, extract it and put it on hdfs:
+```
+tar -xzvf BasicWord2Vec.Model.5000.tar.gz # should output BasicWord2Vec.Model/
+hdfs dfs -put BasicWord2Vec.Model
+```
+Then when you run the app, it will load this model instead of training from scratch. 
