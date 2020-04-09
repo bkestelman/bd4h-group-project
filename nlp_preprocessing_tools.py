@@ -8,6 +8,7 @@ from pyspark.sql.functions import col, when, udf
 
 import sparknlp
 import sparknlp.base
+from sparknlp.base import RecursivePipeline
 from sparknlp.annotator import Tokenizer, Stemmer, SentenceEmbeddings
 from sparknlp.pretrained import LemmatizerModel, WordEmbeddingsModel, BertEmbeddings, ElmoEmbeddings
 
@@ -17,14 +18,18 @@ document_col = '_document' # column name to use as output for sparknlp's Documen
 def RawTokenizer(inputCol, outputCol):
     """Tokenizes words and punctuations with no frills"""
     # sparknlp's Tokenizer requires a Document type as input (created by DocumentAssembler) 
-    doc_assembler = sparknlp.base.DocumentAssembler().setInputCol(inputCol).setOutputCol(document_col)
-    tokenizer = Tokenizer().setInputCols(['_document']).setOutputCol(outputCol)
-    tokenizer_pipe = Pipeline(stages=[doc_assembler, tokenizer])
+    doc_assembler = (sparknlp.base.DocumentAssembler()
+        .setInputCol(inputCol)
+        .setOutputCol(document_col)
+        .setCleanupMode('shrink')
+        )
+    tokenizer = Tokenizer().setInputCols([document_col]).setOutputCol(outputCol)
+    tokenizer_pipe = RecursivePipeline(stages=[doc_assembler, tokenizer])
     return tokenizer_pipe
 
 def NoPuncTokenizer(inputCol, outputCol):
     """Tokenizes words and removes punctuation"""
-    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, pattern='\\W')
+    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, pattern='\\W|[0-9]')
     return tokenizer
 
 def StopWordsRemover(inputCol, outputCol):
@@ -61,7 +66,7 @@ def GloveWordEmbeddings(inputCol, outputCol):
     list_to_vector = SQLTransformer(statement = '''
         SELECT *, list_to_vector_udf(UNWRAPPED_EMBEDDINGS) AS {outputCol} 
         FROM __THIS__'''.format(outputCol=outputCol))
-    embeddings_pipe = Pipeline(stages=[
+    embeddings_pipe = RecursivePipeline(stages=[
         word_embeddings, 
         document_embeddings, 
         unwrap,
