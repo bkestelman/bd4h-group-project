@@ -1,33 +1,14 @@
-function [load_data] finished in 6.62 seconds
-function [add_next_admission] finished in 0.09 seconds
-function [label_readmissions] finished in 0.05 seconds
-function [preprocess_data] finished in 0.29 seconds
+function [load_data] finished in 7.03 seconds
+function [add_next_admission] finished in 0.15 seconds
+function [label_readmissions] finished in 0.09 seconds
+function [preprocess_data] finished in 0.44 seconds
 splitting dataset into train & test
-Adding features using BagOfWords
-function [add_features] finished in 85.54 seconds
+20/04/09 01:14:24 WARN TaskSetManager: Stage 18 contains a task of very large size (11304 KB). The maximum recommended task size is 100 KB.
 starting logistic regression...
-Train Area Under ROC 1.0
-Test Area Under ROC 0.6920250896057358
-function [do_lr] finished in 8.81 seconds
-run completed in 1.69 minutes
-Adding features using BasicWord2Vec
-Loading saved model from BasicWord2Vec.model
-function [add_features] finished in 9.19 seconds
-starting logistic regression...
-Train Area Under ROC 0.7658098525844391
-Test Area Under ROC 0.6438172043010766
-function [do_lr] finished in 49.60 seconds
-run completed in 2.67 minutes
-Adding features using GloveWordEmbeddings
-glove_100d download started this may take some time.
-Approximate size to download 145.3 MB
-[ | ]glove_100d download started this may take some time.
-Approximate size to download 145.3 MB
-Download done! Loading the resource.
-[OK!]
-function [add_features] finished in 6.53 seconds
-starting logistic regression...
-Train Area Under ROC 0.7347919387945644
-Test Area Under ROC 0.6233870967741953
-function [do_lr] finished in 191.95 seconds
-run completed in 5.98 minutes
+Train Area Under ROC 0.6360460552416791
+Test Area Under ROC 0.6156920052763626
+function [do_lr] finished in 802.71 seconds
+
+real    14m18.314s
+user    1m51.835s
+sys     0m5.709s

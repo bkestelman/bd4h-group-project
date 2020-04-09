@@ -4,7 +4,7 @@ spark_app_name = 'LoadData'  # TODO: make a better app name xD
 debug_print = False
 dump_dataset = False
 sample_run = True # use only a sample of the data (applies after preprocessing, otherwise we can have a situation where very few of the samples are actually discharge summaries)
-sample_size = 3000
+sample_size = 10000
 
 # to run locally, set env var RUN_ON_AWS=False, defaults to true
 run_on_aws = True if os.getenv('RUN_ON_AWS', 'true').lower() in ['true', 'yes'] else False

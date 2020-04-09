@@ -17,6 +17,15 @@ def BasicWord2Vec(inputCol, outputCol):
         ])
     return pipe
 
+def PreWord2VecPipe(inputCol, outputCol):
+    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+    finisher = Finisher(inputCol='TOKENS', outputCol='FINISHED_TOKENS') 
+    pipe = Pipeline(stages=[
+        tokenizer,
+        finisher,
+        ])
+    return pipe
+
 def GloveWordEmbeddings(inputCol, outputCol):
     tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
     word_embeddings = nlp.GloveWordEmbeddings(inputCol='TOKENS', outputCol=outputCol)

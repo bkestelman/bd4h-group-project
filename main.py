@@ -2,19 +2,22 @@
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark import StorageLevel
-from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count
+from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count, udf
 from pyspark.sql.window import Window
 from utils import timeit
 import os, time, shutil
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
-from pyspark.ml.linalg import Vectors, VectorUDT
+from pyspark.ml.linalg import Vectors, DenseVector, VectorUDT
 # import matplotlib.pyplot as plt
 # TODO: does not make it to AWS pyspark, even though installed via requirements.txt. pip vs pip3 problem?
 
 from bag_of_words import BagOfWords 
-from word2vec import BasicWord2Vec, GloveWordEmbeddings
+from word2vec import BasicWord2Vec, GloveWordEmbeddings, PreWord2VecPipe
 from build_features import add_features
+from pyspark.ml.feature import Word2Vec, Word2VecModel
+from pyspark.ml import PipelineModel
+from hyperparameters import word2vec_params
 
 import config
 import helper_udfs
@@ -231,43 +234,66 @@ if __name__ == '__main__':
     print('splitting dataset into train & test')
 
     features_builders = [
-        BagOfWords,
-        BasicWord2Vec,
-        GloveWordEmbeddings,
+        #BagOfWords,
+        #BasicWord2Vec,
+        #GloveWordEmbeddings,
         ]
 
-    for features_builder in features_builders: 
-        save_model_path = config.save_model_paths.get(features_builder.__name__)
-        dataset_w_features = (add_features(labeled_dataset, features_builder, save_model_path)
-            .select('HADM_ID', 'FEATURES', 'LABEL')
-            )
-        dataset_w_features.cache()
-        #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
+    pre_word2vec_pipe = PreWord2VecPipe('TEXT', 'FINISHED_TOKENS')
+    tokenized_data = pre_word2vec_pipe.fit(labeled_dataset).transform(labeled_dataset)
+#    word2vec = Word2Vec(inputCol='FINISHED_TOKENS', outputCol='features', minCount=0, **word2vec_params) 
+#    word2vec.fit(labeled_dataset)
+    model = PipelineModel.load(config.save_model_paths.get('BasicWord2Vec')).stages[-1]
+    vectors = model.getVectors()
+    vectors_dict = dict(vectors.rdd.map(lambda row: (row['word'], row['vector'])).collect())
+    vectors_b = sc.broadcast(vectors_dict)
+    def vectorize(tokens):
+        acc = DenseVector([0 for i in range(word2vec_params['vectorSize'])])
+        for tok in tokens:
+            add = vectors_b.value.get(tok)
+            if add is not None:
+                acc += add
+        return acc / len(tokens)
+    vectorize_udf = udf(vectorize, VectorUDT())
+    dataset_w_features = tokenized_data.withColumn('FEATURES', vectorize_udf(col('text'))).select('HADM_ID', 'FEATURES', 'LABEL')
 
-        if config.dump_dataset:
-            csv_dump_dir = 'dataset_input'
-            if os.path.exists(csv_dump_dir) and os.path.isdir(csv_dump_dir):  # delete csv dir if exists
-                shutil.rmtree(csv_dump_dir)
+    train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
+    test = test_ids.join(dataset_w_features, test_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
+    print('starting logistic regression...')
+    do_lr(train, test)
 
-            csv_df = dataset_w_features.withColumn('FEATURES_AS_STRING', col('FEATURES').cast('string'))\
-                .withColumn('TEXT_TOKENIZED_STRING', col('TEXT_TOKENIZED').cast('string')) \
-                .withColumn('RAW_TOKENS_STRING', col('RAW_TOKENS').cast('string'))
-
-            csv_df = csv_df.drop('FEATURES').drop('TEXT_TOKENIZED_STRING').drop('RAW_TOKENS').drop('TEXT')
-            csv_df = csv_df['SUBJECT_ID', 'HADM_ID', 'NEXT_ADMITTIME', 'NEXT_ADMISSION_TYPE', 'NEXT_DAYS_ADMIT', 'LABEL',
-                            'FEATURES_AS_STRING']
-            csv_df.printSchema()
-            csv_df.repartition(1).write.csv('dataset_input', header=True)
-
-        # logistic regression: mpatel364 - memory errors when running logistic regression locally
-        # dataset_w_features.repartition(3000)
-        train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
-        test = test_ids.join(dataset_w_features, test_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
-        print('starting logistic regression...')
-        do_lr(train, test)
-
-        print('run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
-        # print('training dataset count: ', train.count())
-        # print('test dataset count: ', test.count())
-        # training dataset count:  42178
-        # test dataset count:  10548
+#    for features_builder in features_builders: 
+#        save_model_path = config.save_model_paths.get(features_builder.__name__)
+#        dataset_w_features = (add_features(labeled_dataset, features_builder, save_model_path)
+#            .select('HADM_ID', 'FEATURES', 'LABEL')
+#            )
+#        dataset_w_features.cache()
+#        #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
+#
+#        if config.dump_dataset:
+#            csv_dump_dir = 'dataset_input'
+#            if os.path.exists(csv_dump_dir) and os.path.isdir(csv_dump_dir):  # delete csv dir if exists
+#                shutil.rmtree(csv_dump_dir)
+#
+#            csv_df = dataset_w_features.withColumn('FEATURES_AS_STRING', col('FEATURES').cast('string'))\
+#                .withColumn('TEXT_TOKENIZED_STRING', col('TEXT_TOKENIZED').cast('string')) \
+#                .withColumn('RAW_TOKENS_STRING', col('RAW_TOKENS').cast('string'))
+#
+#            csv_df = csv_df.drop('FEATURES').drop('TEXT_TOKENIZED_STRING').drop('RAW_TOKENS').drop('TEXT')
+#            csv_df = csv_df['SUBJECT_ID', 'HADM_ID', 'NEXT_ADMITTIME', 'NEXT_ADMISSION_TYPE', 'NEXT_DAYS_ADMIT', 'LABEL',
+#                            'FEATURES_AS_STRING']
+#            csv_df.printSchema()
+#            csv_df.repartition(1).write.csv('dataset_input', header=True)
+#
+#        # logistic regression: mpatel364 - memory errors when running logistic regression locally
+#        # dataset_w_features.repartition(3000)
+#        train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
+#        test = test_ids.join(dataset_w_features, test_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
+#        print('starting logistic regression...')
+#        do_lr(train, test)
+#
+#        print('run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
+#        # print('training dataset count: ', train.count())
+#        # print('test dataset count: ', test.count())
+#        # training dataset count:  42178
+#        # test dataset count:  10548
