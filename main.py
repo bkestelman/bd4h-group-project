@@ -7,14 +7,16 @@ from utils import timeit
 import os, time, shutil
 from pyspark.ml.classification import LogisticRegression
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
+from pyspark.ml.linalg import Vectors, VectorUDT
 # import matplotlib.pyplot as plt
 # TODO: does not make it to AWS pyspark, even though installed via requirements.txt. pip vs pip3 problem?
 
 from bag_of_words import BagOfWords 
-from word2vec import BasicWord2Vec
+from word2vec import BasicWord2Vec, GloveWordEmbeddings
 from build_features import add_features
 
 import config
+import helper_udfs
 
 #from nlp_preprocessing_tools import NoPuncTokenizer, StopWordsRemover
 #from pyspark.ml.feature import CountVectorizer, RegexTokenizer
@@ -31,6 +33,9 @@ sc.setLogLevel('WARN')
 # Add local modules here
 for sc_py_file in config.sc_py_files:
     sc.addPyFile(sc_py_file)
+
+# Register UDF's
+spark.udf.register('list_to_vector_udf', helper_udfs.list_to_vector, VectorUDT())
 
 @timeit
 def load_data():
@@ -218,16 +223,21 @@ if __name__ == '__main__':
     if config.sample_run:
         labeled_dataset = labeled_dataset.limit(config.sample_size)
     labeled_dataset.cache() # HUGE performance improvement by caching!
+    #labeled_dataset.groupby('HADM_ID').count().where(col('count') != 1).show() # checked that after preprocessing, HADM_ID is unique for all rows
+
+    train_ids, test_ids = labeled_dataset.select(col('HADM_ID').alias('HADM_ID_SPLIT')).randomSplit([0.8, 0.2], seed=40**3) # the alias is to make joining to features smoother
+    print('splitting dataset into train & test')
 
     features_builders = [
         BagOfWords,
         BasicWord2Vec,
+        GloveWordEmbeddings,
         ]
 
     for features_builder in features_builders: 
-        dataset_w_features = add_features(labeled_dataset, features_builder)
+        save_model_path = config.save_model_paths.get(features_builder.__name__)
+        dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path)
         dataset_w_features.cache()
-        #dataset_w_features.show()
 
         if config.dump_dataset:
             csv_dump_dir = 'dataset_input'
@@ -246,10 +256,8 @@ if __name__ == '__main__':
 
         # logistic regression: mpatel364 - memory errors when running logistic regression locally
         # dataset_w_features.repartition(3000)
-        print('splitting dataset into train & test')
-        train, test = dataset_w_features.randomSplit([0.8, 0.2], seed=40**3)
-        train.cache()
-        test.cache()
+        train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
+        test = test_ids.join(dataset_w_features, test_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
         print('starting logistic regression...')
         do_lr(train, test)
 

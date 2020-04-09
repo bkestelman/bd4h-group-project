@@ -1,20 +1,33 @@
-function [load_data] finished in 8.27 seconds
+function [load_data] finished in 7.22 seconds
 function [add_next_admission] finished in 0.08 seconds
-function [label_readmissions] finished in 0.04 seconds
-function [preprocess_data] finished in 0.30 seconds
-Adding features using BagOfWords
-function [add_features] finished in 85.84 seconds
+function [label_readmissions] finished in 0.11 seconds
+function [preprocess_data] finished in 0.36 seconds
 splitting dataset into train & test
+Adding features using BagOfWords
+function [add_features] finished in 90.73 seconds
 starting logistic regression...
 Train Area Under ROC 1.0
-Test Area Under ROC 0.3582887700534759
-function [do_lr] finished in 8.54 seconds
-run completed in 1.72 minutes
+Test Area Under ROC 0.3512233622730858
+function [do_lr] finished in 10.25 seconds
+run completed in 1.82 minutes
 Adding features using BasicWord2Vec
-,function [add_features] finished in 79.01 seconds
-splitting dataset into train & test
+Loading saved model from BasicWord2Vec.model
+function [add_features] finished in 6.75 seconds
 starting logistic regression...
-Train Area Under ROC 0.800942440657065
-Test Area Under ROC 0.7005347593582888
-function [do_lr] finished in 31.43 seconds
-run completed in 3.57 minutes
+Train Area Under ROC 0.8243786851821205
+Test Area Under ROC 0.6479873717442787
+function [do_lr] finished in 30.81 seconds
+run completed in 2.44 minutes
+Adding features using GloveWordEmbeddings
+glove_100d download started this may take some time.
+Approximate size to download 145.3 MB
+[ | ]glove_100d download started this may take some time.
+Approximate size to download 145.3 MB
+Download done! Loading the resource.
+[OK!]
+function [add_features] finished in 9.08 seconds
+starting logistic regression...
+Train Area Under ROC 0.7885600925772882
+Test Area Under ROC 0.6353591160221
+function [do_lr] finished in 134.29 seconds
+run completed in 4.83 minutes
