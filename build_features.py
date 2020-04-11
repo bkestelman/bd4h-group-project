@@ -35,11 +35,5 @@ def add_features(dataset, features_builder, save_path=None):
     dataset_w_features = pipelineModel.transform(dataset)
     #print(dataset_w_features.select('FEATURES').first())
 
-    if config.debug_print:
-        print('tokenizer')
-        text_tokenized.select('SUBJECT_ID', 'TEXT', 'TOKENS').show()
-
-        print('features')
-        dataset_w_features.select('SUBJECT_ID', 'TEXT', 'TOKENS', 'FEATURES').show()
 
     return dataset_w_features

@@ -10,3 +10,9 @@ fit_limits = {
 bag_of_words_params = {
     'vocabSize': 3000,
 }
+
+tf_idf_params = {
+    'vocabSize': 3000,
+}
+
+
