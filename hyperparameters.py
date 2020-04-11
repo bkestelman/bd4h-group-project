@@ -4,5 +4,9 @@ word2vec_params = {
 }
 
 fit_limits = {
-    'word2vec': 1000, # 1000 seems to be the highest order of magnitude before word2vec fitting gets really slow
+    'word2vec': 1000, 
+}
+
+bag_of_words_params = {
+    'vocabSize': 3000,
 }
