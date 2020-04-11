@@ -2,7 +2,7 @@
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark import StorageLevel
-from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count
+from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count, rand
 from pyspark.sql.window import Window
 from utils import timeit
 import os, time, shutil
@@ -14,10 +14,17 @@ from pyspark.ml.linalg import Vectors, VectorUDT
 
 from bag_of_words import BagOfWords 
 from word2vec import BasicWord2Vec, GloveWordEmbeddings
+from tf_idf import TfIdf
 from build_features import add_features
 
 import config
 import helper_udfs
+from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+
+from models import Model
+
+
+SEED = 40**3
 
 #from nlp_preprocessing_tools import NoPuncTokenizer, StopWordsRemover
 #from pyspark.ml.feature import CountVectorizer, RegexTokenizer
@@ -183,36 +190,58 @@ def label_readmissions(admissions, days):
         )
     return readmissions 
 
-@timeit
-def do_lr(train, test):
-    # https://medium.com/@dhiraj.p.rai/logistic-regression-in-spark-ml-8a95b5f5434c
+# @timeit
+# def do_lr(train, test):
+#     # https://medium.com/@dhiraj.p.rai/logistic-regression-in-spark-ml-8a95b5f5434c
+#
+#     if lr_class_weights:  # balance class weights
+#         weight_col = 'classWeights'
+#         neg_labels = train.where(col('LABEL') == 0).count()
+#         train_count = train.count()
+#         balancing_ratio = neg_labels / train_count
+#         print('balancing ratio: {:.2f}'.format(balancing_ratio))
+#         train = train.withColumn(weight_col, when(col('LABEL') == 1, balancing_ratio).otherwise(1 - balancing_ratio))
+#         lr = LogisticRegression(featuresCol='FEATURES', labelCol='LABEL', maxIter=lr_iterations, weightCol=weight_col)
+#         # train.select(weight_col).show(5)
+#     else:
+#         lr = LogisticRegression(featuresCol='FEATURES', labelCol='LABEL', maxIter=5)
+#
+#     evaluator = BinaryClassificationEvaluator().setLabelCol('LABEL')
+#     param_grid = ParamGridBuilder()\
+#         .addGrid(lr.fitIntercept, [False, True]) \
+#         .addGrid(lr.regParam, [0.01, 0.5, 2.0]) \
+#         .build()
+#         # .addGrid(lr.aggregationDepth, [2, 5, 10])\
+#         # .addGrid(lr.elasticNetParam, [0.0, 0.5, 1.0]) \
+#         # .build()
+#
+#     model = lr.fit(train)
+#     # Create 3-fold CrossValidator
+#     # cv = CrossValidator(estimator=lr, estimatorParamMaps=param_grid, evaluator=evaluator, numFolds=3)
+#     # model = cv.fit(train)
+#
+#     predict_train = model.transform(train)
+#     predictions = model.transform(test)
+#
+#     # evaluator = BinaryClassificationEvaluator().setLabelCol('LABEL')
+#     print('Train Area Under ROC', evaluator.evaluate(predict_train))
+#     print('Test Area Under ROC', evaluator.evaluate(predictions))
 
-    lr = LogisticRegression(featuresCol='FEATURES', labelCol='LABEL', maxIter=5)
-    model = lr.fit(train)
-    training_summary = model.summary
 
-    # roc = training_summary.roc.toPandas()
-    # plt.plot(roc['FPR'], roc['TPR'])
-    # plt.ylabel('False Positive Rate')
-    # plt.xlabel('True Positive Rate')
-    # plt.title('ROC Curve')
-    # plt.show()
-    # print('Training set areaUnderROC: ' + str(training_summary.areaUnderROC))
-    #
-    # pr = training_summary.pr.toPandas()
-    # plt.plot(pr['recall'], pr['precision'])
-    # plt.ylabel('Precision')
-    # plt.xlabel('Recall')
-    # plt.show()
+def dump_dataset(dataset_w_features, features_col='FEATURES'):
+    # for debugging, in the event we want see what's fed to the ML algorithms
 
-    predict_train = model.transform(train)
-    predictions = model.transform(test)
+    if config.dump_dataset:
+        csv_dump_dir = 'dataset_input'
+        if os.path.exists(csv_dump_dir) and os.path.isdir(csv_dump_dir):  # delete csv dir if exists
+            shutil.rmtree(csv_dump_dir)
 
-    evaluator = BinaryClassificationEvaluator().setLabelCol('LABEL')
-    print('Train Area Under ROC', evaluator.evaluate(predict_train))
-    print('Test Area Under ROC', evaluator.evaluate(predictions))
-    # Train Area Under ROC 0.9999999557292707
-    # Test Area Under ROC 0.615184213495825
+        csv_df = dataset_w_features.withColumn('FEATURES_AS_STRING', col('FEATURES').cast('string'))
+        csv_df = csv_df.drop('FEATURES').drop('TEXT_TOKENIZED_STRING').drop('RAW_TOKENS').drop('TEXT')
+        csv_df = csv_df['HADM_ID', 'LABEL',  'FEATURES_AS_STRING']
+        csv_df.printSchema()
+        csv_df.repartition(1).write.csv(config.dump_dataset, header=True)
+
 
 if __name__ == '__main__':
 
@@ -221,53 +250,69 @@ if __name__ == '__main__':
     admissions, noteevents = load_data()
 
     labeled_dataset = preprocess_data(admissions, noteevents)
-    if config.sample_run:
+
+    if config.sample_run:  # run on a smaller sized dataset
         labeled_dataset = labeled_dataset.limit(config.sample_size)
+
+    elif config.balance_dataset_negatives:  # sub sample negatives according to ratio
+        pos_labels = labeled_dataset.where(col('LABEL') == 1)
+        neg_labels = labeled_dataset.where(col('LABEL') == 0)
+        neg_percent_subsample = int(pos_labels.count() * config.balance_dataset_ratio) / neg_labels.count()
+        neg_labels = neg_labels.sample(withReplacement=False, fraction=neg_percent_subsample, seed=SEED)
+        labeled_dataset = pos_labels.union(neg_labels).orderBy(rand(seed=SEED))
+
+        # df = spark.createDataFrame([{"a": "x", "b": "y", "c": "3"}])
+
     labeled_dataset.cache() # HUGE performance improvement by caching!
     #labeled_dataset.persist(StorageLevel.MEMORY_AND_DISK) 
     #labeled_dataset.groupby('HADM_ID').count().where(col('count') != 1).show() # checked that after preprocessing, HADM_ID is unique for all rows
 
-    train_ids, test_ids = labeled_dataset.select(col('HADM_ID').alias('HADM_ID_SPLIT')).randomSplit([0.8, 0.2], seed=40**3) # the alias is to make joining to features smoother
+    train_ids, test_ids = labeled_dataset.select(col('HADM_ID').alias('HADM_ID_SPLIT')).randomSplit([0.8, 0.2], seed=SEED) # the alias is to make joining to features smoother
+
+    labeled_dataset_count = labeled_dataset.count()
+    pos_count = labeled_dataset.where(col('LABEL') == 1).count()
+    neg_count = labeled_dataset.where(col('LABEL') == 0).count()
+
+    print('dataset count:{} positive:{} negative:{}'.format(labeled_dataset_count, pos_count, neg_count))
     print('splitting dataset into train & test')
 
     features_builders = [
+        TfIdf,
         BagOfWords,
         BasicWord2Vec,
         GloveWordEmbeddings,
         ]
 
-    for features_builder in features_builders: 
+    for features_builder in features_builders:
+        f_start = time.time()
+        print('-'*50)
+        print('running feature builder: {}'.format(features_builder.__name__))
         save_model_path = config.save_model_paths.get(features_builder.__name__)
-        dataset_w_features = (add_features(labeled_dataset, features_builder, save_model_path)
+        dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path)\
             .select('HADM_ID', 'FEATURES', 'LABEL')
-            )
+
         dataset_w_features.cache()
         #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
 
-        if config.dump_dataset:
-            csv_dump_dir = 'dataset_input'
-            if os.path.exists(csv_dump_dir) and os.path.isdir(csv_dump_dir):  # delete csv dir if exists
-                shutil.rmtree(csv_dump_dir)
-
-            csv_df = dataset_w_features.withColumn('FEATURES_AS_STRING', col('FEATURES').cast('string'))\
-                .withColumn('TEXT_TOKENIZED_STRING', col('TEXT_TOKENIZED').cast('string')) \
-                .withColumn('RAW_TOKENS_STRING', col('RAW_TOKENS').cast('string'))
-
-            csv_df = csv_df.drop('FEATURES').drop('TEXT_TOKENIZED_STRING').drop('RAW_TOKENS').drop('TEXT')
-            csv_df = csv_df['SUBJECT_ID', 'HADM_ID', 'NEXT_ADMITTIME', 'NEXT_ADMISSION_TYPE', 'NEXT_DAYS_ADMIT', 'LABEL',
-                            'FEATURES_AS_STRING']
-            csv_df.printSchema()
-            csv_df.repartition(1).write.csv('dataset_input', header=True)
-
         # logistic regression: mpatel364 - memory errors when running logistic regression locally
-        # dataset_w_features.repartition(3000)
         train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
         test = test_ids.join(dataset_w_features, test_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
         print('starting logistic regression...')
-        do_lr(train, test)
+        lr_start = time.time()
+        # do_lr(train, test)
+        ml_model = Model(algorithm='LogisticRegression', train=train, test=test, features_col='FEATURES',
+                         label_col='LABEL')
 
-        print('run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
+        ml_model.train_model()
+        ml_model.evaluate()
+        print('logistic regression completed in {:.2f} minutes'.format((time.time()-lr_start) / 60.))
+        print('feature run completed in {:.2f} minutes'.format((time.time()-f_start) / 60.))
+
+    print('total run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
+    print('-'*50)
+
         # print('training dataset count: ', train.count())
         # print('test dataset count: ', test.count())
         # training dataset count:  42178
         # test dataset count:  10548
+
