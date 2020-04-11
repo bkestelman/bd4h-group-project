@@ -1,20 +1,55 @@
-function [load_data] finished in 7.42 seconds
-function [add_next_admission] finished in 0.09 seconds
-function [label_readmissions] finished in 0.04 seconds
-function [preprocess_data] finished in 0.26 seconds
+function [load_data] finished in 7.39 seconds
+function [add_next_admission] finished in 0.08 seconds
+function [label_readmissions] finished in 0.09 seconds
+function [preprocess_data] finished in 0.34 seconds
+dataset count:10506 positive:2093 negative:8413
+splitting dataset into train & test
+--------------------------------------------------
+running feature builder: TfIdf
+Adding features using TfIdf
+function [add_features] finished in 140.95 seconds
+starting logistic regression...
+training LogisticRegression
+Train Area Under ROC 0.7954038077504021
+Test Area Under ROC 0.6970363107287444
+logistic regression completed in 1.53 minutes
+feature run completed in 3.88 minutes
+--------------------------------------------------
+running feature builder: BagOfWords
 Adding features using BagOfWords
-function [add_features] finished in 147.50 seconds
-splitting dataset into train & test
+function [add_features] finished in 8.67 seconds
 starting logistic regression...
-Train Area Under ROC 0.9999999557292706
-Test Area Under ROC 0.6151835082374181
-function [do_lr] finished in 287.29 seconds
-run completed in 7.38 minutes
+training LogisticRegression
+Train Area Under ROC 0.8036224272031456
+Test Area Under ROC 0.6986163507545089
+logistic regression completed in 0.42 minutes
+feature run completed in 0.56 minutes
+--------------------------------------------------
+running feature builder: BasicWord2Vec
 Adding features using BasicWord2Vec
-function [add_features] finished in 82.99 seconds
-splitting dataset into train & test
+Loading saved model from BasicWord2Vec.model
+function [add_features] finished in 5.26 seconds
 starting logistic regression...
-Train Area Under ROC 0.6853027007432243
-Test Area Under ROC 0.642688821184082
-function [do_lr] finished in 403.62 seconds
-run completed in 15.49 minutes
+training LogisticRegression
+Train Area Under ROC 0.6622095036743976
+Test Area Under ROC 0.6418484886823702
+logistic regression completed in 0.87 minutes
+feature run completed in 0.96 minutes
+--------------------------------------------------
+running feature builder: GloveWordEmbeddings
+Adding features using GloveWordEmbeddings
+glove_100d download started this may take some time.
+Approximate size to download 145.3 MB
+[ | ]glove_100d download started this may take some time.
+Approximate size to download 145.3 MB
+Download done! Loading the resource.
+[OK!]
+function [add_features] finished in 39.00 seconds
+starting logistic regression...
+training LogisticRegression
+Train Area Under ROC 0.623816463688374
+Test Area Under ROC 0.6152897267206479
+logistic regression completed in 5.14 minutes
+feature run completed in 5.80 minutes
+total run completed in 14.84 minutes
+--------------------------------------------------
