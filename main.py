@@ -283,6 +283,11 @@ if __name__ == '__main__':
         GloveWordEmbeddings,
         ]
 
+    algorithms = [
+        'LinearSVM',
+        'LogisticRegression'
+    ]
+
     for features_builder in features_builders:
         f_start = time.time()
         print('-'*50)
@@ -291,22 +296,22 @@ if __name__ == '__main__':
         dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path)\
             .select('HADM_ID', 'FEATURES', 'LABEL')
 
+        print('feature run completed in {:.2f} minutes'.format((time.time()-f_start)/60.))
         dataset_w_features.cache()
         #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
 
-        # logistic regression: mpatel364 - memory errors when running logistic regression locally
         train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
         test = test_ids.join(dataset_w_features, test_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
-        print('starting logistic regression...')
-        lr_start = time.time()
-        # do_lr(train, test)
-        ml_model = Model(algorithm='LogisticRegression', train=train, test=test, features_col='FEATURES',
-                         label_col='LABEL')
 
-        ml_model.train_model()
-        ml_model.evaluate()
-        print('logistic regression completed in {:.2f} minutes'.format((time.time()-lr_start) / 60.))
-        print('feature run completed in {:.2f} minutes'.format((time.time()-f_start) / 60.))
+        for algorithm in algorithms:
+            print('starting algorithm: {}'.format(algorithm))
+            train_start = time.time()
+            ml_model = Model(algorithm=algorithm, train=train, test=test, features_col='FEATURES',
+                             cv=False, label_col='LABEL')
+
+            ml_model.train_model()
+            ml_model.evaluate()
+            print('algorithm: {} completed in {:.2f} minutes'.format(algorithm, (time.time()-train_start)/60.))
 
     print('total run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))
     print('-'*50)
