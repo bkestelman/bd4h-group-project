@@ -310,7 +310,7 @@ if __name__ == '__main__':
                              cv=False, label_col='LABEL')
 
             ml_model.train_model()
-            ml_model.evaluate()
+            ml_model.evaluate(save_fig=False)
             print('algorithm: {} completed in {:.2f} minutes'.format(algorithm, (time.time()-train_start)/60.))
 
     print('total run completed in {:.2f} minutes'.format((time.time()-t_start)/60.))

@@ -4,6 +4,8 @@ spark_app_name = 'LoadData'  # TODO: make a better app name xD
 debug_print = False
 dump_dataset = False
 
+plots_dir = os.path.join(os.path.dirname(__file__), 'plots')
+
 # first preference (if set, run on a random dataset with sample_size = 3000)
 sample_run = False # use only a sample of the data (applies after preprocessing, otherwise we can have a situation where very few of the samples are actually discharge summaries)
 sample_size = 3000

@@ -3,6 +3,8 @@ from pyspark.ml.classification import LogisticRegression, LinearSVC
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator, TrainValidationSplit
 from pyspark.sql.functions import col, when, count
 import matplotlib.pyplot as plt
+import config
+import os
 
 
 # TrainValidationSplit only evaluates each combination of parameters once,
@@ -69,6 +71,7 @@ class Model:
                     .addGrid(model.fitIntercept, [False, True]) \
                     .addGrid(model.regParam, [0.01, 0.5, 2.0]) \
                     .addGrid(model.aggregationDepth, [2, 5, 10]) \
+                    .addGrid(model.maxIter, [10, 15, 20]) \
                     .build()
 
                 # cv_model = CrossValidator(estimator=model, estimatorParamMaps=param_grid, evaluator=self.evaluator,
@@ -88,26 +91,27 @@ class Model:
         print('training {}'.format(self.algorithm))
         self.trained_model = self.model.fit(self.train)
 
-    def evaluate(self):
+    def evaluate(self, save_fig=False):
         predict_train = self.trained_model.transform(self.train)
         predictions = self.trained_model.transform(self.test)
         print('Train Area Under ROC for {}: {}'.format(self.algorithm, self.evaluator.evaluate(predict_train)))
         print('Test Area Under ROC for {}: {}'.format(self.algorithm, self.evaluator.evaluate(predictions)))
 
-        # training_summary = self.trained_model.summary
-        # roc = training_summary.roc.toPandas()
-        # plt.plot(roc['FPR'], roc['TPR'])
-        # plt.ylabel('False Positive Rate')
-        # plt.xlabel('True Positive Rate')
-        # plt.title('ROC Curve')
-        # plt.show()
-        # print('Training set areaUnderROC: ' + str(training_summary.areaUnderROC))
-        #
-        # pr = training_summary.pr.toPandas()
-        # plt.plot(pr['recall'], pr['precision'])
-        # plt.ylabel('Precision')
-        # plt.xlabel('Recall')
-        # plt.show()
+        if save_fig and self.algorithm == 'LogisticRegression':
+            training_summary = self.trained_model.summary
+            roc = training_summary.roc.toPandas()
+            plt.figure()
+            plt.plot(roc['FPR'], roc['TPR'])
+            plt.ylabel('False Positive Rate')
+            plt.xlabel('True Positive Rate')
+            plt.title('ROC Curve for {}'.format(self.algorithm))
+            plt.savefig(os.path.join(config.plots_dir, '{}_auc_curve.png'.format(self.algorithm)))
+            # plt.show()
 
-        # Train Area Under ROC 0.9999999557292707
-        # Test Area Under ROC 0.615184213495825
+            pr = training_summary.pr.toPandas()
+            plt.figure()
+            plt.plot(pr['recall'], pr['precision'])
+            plt.ylabel('Precision')
+            plt.xlabel('Recall Cure for {}'.format(self.algorithm))
+            plt.savefig(os.path.join(config.plots_dir, '{}_recall_curve.png'.format(self.algorithm)))
+            # plt.show()
