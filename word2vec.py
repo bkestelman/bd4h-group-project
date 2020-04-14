@@ -1,6 +1,10 @@
 ### Includes word2vec and other word embeddings
-from pyspark.ml import Pipeline
+from pyspark import SparkContext
+from pyspark.ml import Pipeline, Transformer
 from pyspark.ml.feature import Word2Vec
+from pyspark.ml.linalg import DenseVector, VectorUDT
+from pyspark.sql.functions import udf
+from pyspark.sql.types import ArrayType
 
 import nlp_preprocessing_tools as nlp
 from nlp_preprocessing_tools import RawTokenizer, Lemmatizer, Finisher
@@ -25,6 +29,32 @@ def GloveWordEmbeddings(inputCol, outputCol):
         word_embeddings,
         ])
     return pipe
+
+class Words2MatrixTransformer(Transformer):
+    """
+    Uses a trained Word2VecModel to transform tokenized text to a matrix composed of word
+    vectors
+    """
+    def __init__(self, inputCol, outputCol, word2vecModel):
+        super(Words2MatrixTransformer, self).__init__()
+        self.inputCol = inputCol
+        self.outputCol = outputCol
+        self.word2vecModel = word2vecModel
+
+    def transform(self, df):
+        word_vectors = self.word2vecModel.getVectors()
+        sc = SparkContext.getOrCreate()
+        broadcast_vectors = sc.broadcast(word_vectors.rdd.collectAsMap()) 
+        def words2matrix(words):
+            matrix = []
+            for word in words:
+                matrix.append(broadcast_vectors.value[word])
+            return matrix
+        words2matrix_udf = udf(words2matrix, ArrayType(VectorUDT()))
+        return df.withColumn(self.outputCol, words2matrix_udf(self.inputCol))
+
+def Words2Matrix(inputCol, outputCol, word2vecModel):
+    return Pipeline(stages=[Words2MatrixTransformer(word2vecModel)])
 
 # BERT is a state of the art pretrained word embedding model
 # Couldn't test locally - ran out of memory. May be worthwhile testing on the cluster

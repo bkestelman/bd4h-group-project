@@ -13,9 +13,9 @@ from pyspark.ml.linalg import Vectors, VectorUDT
 # TODO: does not make it to AWS pyspark, even though installed via requirements.txt. pip vs pip3 problem?
 
 from bag_of_words import BagOfWords 
-from word2vec import BasicWord2Vec, GloveWordEmbeddings
+from word2vec import BasicWord2Vec, GloveWordEmbeddings, Words2Matrix
 from tf_idf import TfIdf
-from build_features import add_features
+from build_features import add_features, prepare_features_builder
 
 import config
 import helper_udfs
@@ -281,6 +281,7 @@ if __name__ == '__main__':
         BagOfWords,
         BasicWord2Vec,
         GloveWordEmbeddings,
+        Words2Matrix,
         ]
 
     for features_builder in features_builders:
@@ -288,11 +289,17 @@ if __name__ == '__main__':
         print('-'*50)
         print('running feature builder: {}'.format(features_builder.__name__))
         save_model_path = config.save_model_paths.get(features_builder.__name__)
-        dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path)\
+        extra_args = prepare_features_builder(features_builder)
+        dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path, **extra_args)\
             .select('HADM_ID', 'FEATURES', 'LABEL')
 
         dataset_w_features.cache()
         #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
+
+        if features_builder.__name__ == 'Words2Matrix':
+            dataset_w_features.printSchema()
+            dataset_w_features.show()
+            continue
 
         # logistic regression: mpatel364 - memory errors when running logistic regression locally
         train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])

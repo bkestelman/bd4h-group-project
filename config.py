@@ -29,4 +29,5 @@ sc_py_files = ['helper_udfs.py'] # get import error when this is not added here.
 
 save_model_paths = {
     'BasicWord2Vec': 'BasicWord2Vec.model',
+    'Words2Matrix': 'BasicWord2Vec.model', # Words2Matrix uses the model saved by BasicWord2Vec
 }
