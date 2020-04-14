@@ -5,3 +5,4 @@ pyspark>=2.4.5
 pyspark-stubs
 matplotlib
 pytest
+pandas
