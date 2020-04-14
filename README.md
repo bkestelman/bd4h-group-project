@@ -61,3 +61,9 @@ tar -xzvf BasicWord2Vec.Model.5000.tar.gz # should output BasicWord2Vec.Model/
 hdfs dfs -put BasicWord2Vec.Model
 ```
 Then when you run the app, it will load this model instead of training from scratch. 
+
+## Run tests
+We install pytest as part of the requirements.txt
+```
+python3 -m pytest
+```

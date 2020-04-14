@@ -1,7 +1,9 @@
 import random
 from pyspark import SparkContext
+from pyspark import SparkConf
 
-sc = SparkContext(appName="EstimatePi")
+spconfig = SparkConf().setAppName("EstimatePi").setMaster("local")
+sc = SparkContext(conf=spconfig)
 
 
 def inside(p):
