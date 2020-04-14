@@ -48,13 +48,22 @@ class Words2MatrixTransformer(Transformer):
         def words2matrix(words):
             matrix = []
             for word in words:
-                matrix.append(broadcast_vectors.value[word])
+                vec = broadcast_vectors.value.get(word)
+                if vec is not None:
+                    matrix.append(broadcast_vectors.value[word])
             return matrix
         words2matrix_udf = udf(words2matrix, ArrayType(VectorUDT()))
         return df.withColumn(self.outputCol, words2matrix_udf(self.inputCol))
 
 def Words2Matrix(inputCol, outputCol, word2vecModel):
-    return Pipeline(stages=[Words2MatrixTransformer(word2vecModel)])
+    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+    finisher = Finisher(inputCol='TOKENS', outputCol='FINISHED_TOKENS') 
+    pipe = Pipeline(stages=[
+        tokenizer,
+        finisher,
+        Words2MatrixTransformer('FINISHED_TOKENS', outputCol, word2vecModel),
+        ])
+    return pipe
 
 # BERT is a state of the art pretrained word embedding model
 # Couldn't test locally - ran out of memory. May be worthwhile testing on the cluster

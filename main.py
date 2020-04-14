@@ -13,7 +13,7 @@ from pyspark.ml.linalg import Vectors, VectorUDT
 # TODO: does not make it to AWS pyspark, even though installed via requirements.txt. pip vs pip3 problem?
 
 from bag_of_words import BagOfWords 
-from word2vec import BasicWord2Vec, GloveWordEmbeddings, Words2Matrix
+from word2vec import BasicWord2Vec, GloveWordEmbeddings, Words2Matrix, Words2MatrixTransformer
 from tf_idf import TfIdf
 from build_features import add_features, prepare_features_builder
 
@@ -277,10 +277,10 @@ if __name__ == '__main__':
     print('splitting dataset into train & test')
 
     features_builders = [
-        TfIdf,
-        BagOfWords,
+        #TfIdf,
+        #BagOfWords,
         BasicWord2Vec,
-        GloveWordEmbeddings,
+        #GloveWordEmbeddings,
         Words2Matrix,
         ]
 
@@ -290,16 +290,18 @@ if __name__ == '__main__':
         print('running feature builder: {}'.format(features_builder.__name__))
         save_model_path = config.save_model_paths.get(features_builder.__name__)
         extra_args = prepare_features_builder(features_builder)
-        dataset_w_features = add_features(labeled_dataset, features_builder, save_model_path, **extra_args)\
-            .select('HADM_ID', 'FEATURES', 'LABEL')
 
-        dataset_w_features.cache()
-        #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
+        dataset_w_features = (add_features(labeled_dataset, features_builder, save_model_path, **extra_args)
+            .select('HADM_ID', 'FEATURES', 'LABEL')
+        )
 
         if features_builder.__name__ == 'Words2Matrix':
             dataset_w_features.printSchema()
             dataset_w_features.show()
-            continue
+            continue # for now, just testing if we get the matrix for each document, so skip logistic-regression
+
+        dataset_w_features.cache()
+        #dataset_w_features.persist(StorageLevel.MEMORY_AND_DISK)
 
         # logistic regression: mpatel364 - memory errors when running logistic regression locally
         train = train_ids.join(dataset_w_features, train_ids['HADM_ID_SPLIT'] == dataset_w_features['HADM_ID'])
