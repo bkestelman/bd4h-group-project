@@ -1,11 +1,11 @@
-from utils import timeit
 from pyspark.ml import PipelineModel
 
-from bag_of_words import BagOfWords
-from word2vec import BasicWord2Vec
-from hyperparameters import fit_limits 
-import config
-import hdfs_utils
+from .bag_of_words import BagOfWords
+from .word2vec import BasicWord2Vec
+from utils.utils import timeit
+from conf.hyperparameters import fit_limits 
+import conf.config as config
+import utils.hdfs_utils as hdfs_utils
 
 @timeit
 def add_features(dataset, features_builder, save_path=None):

@@ -17,8 +17,8 @@ PIP=${BIN}/$(ls ${BIN} | grep -e 'pip.*3') # Use pip3
 pscp.pssh -h ${CLUSTER_HOSTS_FILE} -x "-oStrictHostKeyChecking=no" requirements.txt ~ 	# Copy requirements.txt to worker hosts
 # pip install + do any additional setup required by specific packages
 pssh -i -h ${CLUSTER_HOSTS_FILE} -x "-oStrictHostKeyChecking=no" \
-    "sudo mkdir /home/nltk_data; \
-    sudo chmod 777 /home/nltk_data; \
-    sudo ${PIP} install -U -r requirements.txt"
+    "sudo ${PIP} install -U -r requirements.txt"
 sudo ${PIP} install -U -r requirements.txt # pip install on master
 
+## Set up requirements for pytorch
+sudo python3 -m spacy download en

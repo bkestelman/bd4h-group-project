@@ -1,5 +1,5 @@
 import hdfs
-import config
+import conf.config as config
 import os
 
 hdfs_host = 'http://localhost'

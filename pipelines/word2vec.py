@@ -4,7 +4,7 @@ from pyspark.ml.feature import Word2Vec
 
 import nlp_preprocessing_tools as nlp
 from nlp_preprocessing_tools import RawTokenizer, Lemmatizer, Finisher
-from hyperparameters import word2vec_params
+from conf.hyperparameters import word2vec_params
 
 def BasicWord2Vec(inputCol, outputCol):
     tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 

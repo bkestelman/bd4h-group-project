@@ -2,7 +2,7 @@ from pyspark.ml import Pipeline
 from pyspark.ml.feature import (IDF, CountVectorizer, HashingTF, Tokenizer, StopWordsRemover)
 from sparknlp.annotator import (Tokenizer, Normalizer, Stemmer)
 from sparknlp.base import DocumentAssembler, Finisher
-from hyperparameters import tf_idf_params
+from conf.hyperparameters import tf_idf_params
 
 def TfIdf(inputCol, outputCol):
 

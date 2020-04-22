@@ -3,7 +3,7 @@ from pyspark.ml.classification import LogisticRegression, LinearSVC
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator, TrainValidationSplit
 from pyspark.sql.functions import col, when, count
 import matplotlib.pyplot as plt
-import config
+import conf.config as config
 import os
 
 

@@ -1,7 +1,7 @@
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import CountVectorizer
 from nlp_preprocessing_tools import NoPuncTokenizer, StopWordsRemover 
-from hyperparameters import bag_of_words_params
+from conf.hyperparameters import bag_of_words_params
 
 def BagOfWords(inputCol, outputCol):
     tokenizer = NoPuncTokenizer(inputCol=inputCol, outputCol='RAW_TOKENS')
