@@ -1,4 +1,5 @@
 import os
+import .hyperparameters as hp
 
 spark_app_name = 'Predicting Readmissions'
 spark_log_level = 'WARN'
@@ -30,7 +31,7 @@ else:  # local run
 sc_py_files = ['helper_udfs.py'] # get import error when this is not added here. Probably only needed for local modules whose functions get distributed to workers (e.g. UDF's)
 
 save_model_paths = {
-    'BasicWord2Vec': 'BasicWord2Vec.model',
+    'BasicWord2Vec': 'BasicWord2Vec.model_' + str(hp.word2vec_params['vectorSize']) + 'd_fit' + str(hp.fit_limits['word2vec']),
 }
 readmissions_csv_out = 'readmissions' # set to None if you want to skip writing the csv because you are using a csv created from a previous run
 

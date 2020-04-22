@@ -31,6 +31,8 @@ def add_features(dataset, features_builder, save_path=None):
     if save_path is not None and not hdfs_utils.file_exists(save_path):
         print('Saving model to', save_path)
         pipelineModel.save(save_path)
+        if features_builder.__name__ == 'BasicWord2Vec': #TODO: ideally, model-specific functionality should not be in this function, but not sure where to put this
+            write_vectors_csv(pipelineModel[-1].getVectors(), save_path + '_vectors') # besides saving the full pipeline model, we also want the word vectors as their own csv for pytorch
 
     dataset_w_features = pipelineModel.transform(dataset)
     #print(dataset_w_features.select('FEATURES').first())

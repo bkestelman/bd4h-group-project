@@ -14,3 +14,7 @@ def write_labeled_readmissions_csv(labeled_dataset, dirname):
             .write.option('header', 'false') # header will be added in bash script after concatenating the partial files   
             .csv(dirname) # Note: this will create a directory with one or more .csv files in it
             )
+
+def write_vectors_csv(vectors_df, path):
+    vectors_df.repartition(1).write.option('sep', ' ').csv(path)
+

@@ -15,8 +15,13 @@ from torchtext.data import Dataset,TabularDataset
 from torch.utils.data import DataLoader
 from pycnn import CNNHelper,MovieDataset,CNNMUL
 
+# TODO: move these options to a separate config file
 SEED = 1234
 N_EPOCHS = 3
+# VECTORS can be one of the prebaked options available in torchtext, or a csv (passed to a Vectors object as below):
+VECTORS = Vectors('word_vectors.csv')
+#VECTORS = "glove.6B.100d"
+
 #ref:https://github.com/bentrevett/pytorch-sentiment-analysis/blob/master/6%20-%20Transformers%20for%20Sentiment%20Analysis.ipynb
 
 random.seed(SEED)
@@ -52,7 +57,7 @@ MAX_VOCAB_SIZE = 30_000
 
 TEXT.build_vocab(train_data, 
                  max_size = MAX_VOCAB_SIZE, 
-                 vectors = "glove.6B.100d", 
+                 vectors = VECTORS, 
                  unk_init = torch.Tensor.normal_)
 
 LABEL.build_vocab(train_data)
@@ -70,7 +75,8 @@ train_iterator, valid_iterator, test_iterator = data.BucketIterator.splits(
     device = device)
 
 INPUT_DIM = len(TEXT.vocab)
-EMBEDDING_DIM = 100
+EMBEDDING_DIM = 50
+#EMBEDDING_DIM = 100
 N_FILTERS = 100
 FILTER_SIZES = [1,2,3,4,5]
 OUTPUT_DIM = 1
