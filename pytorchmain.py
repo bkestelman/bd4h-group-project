@@ -13,7 +13,7 @@ import os
 import torchtext
 from torchtext.data import Dataset,TabularDataset
 from torch.utils.data import DataLoader
-from pycnn import CNNHelper,MovieDataset,CNNMUL
+from pycnn import CNNHelper,MovieDataset,CNNMUL,metrics
 
 SEED = 1234
 N_EPOCHS = 3
@@ -67,6 +67,7 @@ train_iterator, valid_iterator, test_iterator = data.BucketIterator.splits(
     sort_key = lambda x: len(x.text),
     sort_within_batch = False,
     repeat=False,
+    shuffle=True,
     device = device)
 
 INPUT_DIM = len(TEXT.vocab)
@@ -91,7 +92,7 @@ criterion = nn.BCEWithLogitsLoss()
 model = model.to(device)
 criterion = criterion.to(device)
 
-CNNHelper(model)\
+CNNHelper(model,eval_func=metrics.binary_auc)\
     .start(train_iterator,valid_iterator,optimizer,criterion,N_EPOCHS)\
     .test(test_iterator,criterion)\
     .plot()

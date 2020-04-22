@@ -13,6 +13,18 @@ import os
 import torchtext
 from torchtext.data import Dataset,TabularDataset
 from torch.utils.data import DataLoader
+import string
+import pandas as pd
+from sklearn.metrics import roc_curve, auc, roc_auc_score
+
+class Utility(object):
+    @staticmethod
+    def string_cleaner(in_filename,out_filename):
+        '''Clean out punctuations from sentences'''
+        
+        df =pd.read_csv(in_filename,usecols=['text','label'])
+        df['text'] = df['text'].apply(lambda x: x.translate(str.maketrans('', '', string.punctuation)))
+        df.to_csv(out_filename, index=False,header=['text','label'])
 
 class MovieDataset(Dataset):
     def __init__(self, path):
@@ -33,7 +45,6 @@ class MovieDataset(Dataset):
         return self.samples[idx]
     
     def save(self,filename,headers):
-        import pandas as pd
         dataloader = DataLoader(self, batch_size=1, shuffle=True)
         data = [(str(batch[0][0]),str(batch[1][0])) for _, batch in enumerate(dataloader)]
         df = pd.DataFrame(data, columns=[headers[0],headers[1]])
@@ -80,64 +91,115 @@ class CNNMUL(nn.Module):
         cat = self.dropout(torch.cat(pooled, dim = 1))
         return self.linear(cat)
 
-class CNNHelper(object):
-
-    def __init__(self,model):
-        super().__init__()
-        self.model = model
-
-    def count_parameters(self):
-        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-
-    def binary_accuracy(self,preds, y):
+class metrics(object):
+    metric_map={
+        'binary_accuracy':'Accuracy',
+        'binary_roc_auc_score': 'ROC AUC',
+        'binary_auc': 'AUC'
+    }
+    @staticmethod
+    def binary_accuracy(preds, y):
         """
         Returns accuracy per batch, i.e. if you get 8/10 right, this returns 0.8, NOT 8
         """
-
         #round predictions to the closest integer
         rounded_preds = torch.round(torch.sigmoid(preds))
-        correct = (rounded_preds == y).float() #convert into float for division 
+        correct = (rounded_preds == y).float()
         acc = correct.sum() / len(correct)
-        return acc
+        return acc.item()
+
+    @staticmethod
+    def binary_roc_auc_score(preds, y):
+        """
+        Returns ROC AUC: When Only one class present in y, ROC AUC is underfined
+        """
+        #round predictions to the closest integer
+        rounded_preds = torch.round(torch.sigmoid(preds))
+        Y = y.cpu().detach().numpy()
+        pred = rounded_preds.cpu().detach().numpy()
+        return roc_auc_score(Y,pred)
+
+    @staticmethod
+    def binary_auc(preds, y):
+        """
+        Returns AUC: When Only one class present in y, AUC is underfined
+        """
+        #round predictions to the closest integer
+        rounded_preds = torch.round(torch.sigmoid(preds))
+        Y = y.cpu().detach().numpy()
+        pred = rounded_preds.cpu().detach().numpy()
+        false_positive_rate, true_positive_rate, thresholds = roc_curve(Y, pred)
+        return auc(false_positive_rate, true_positive_rate)
+
+class CNNHelper(object):
+
+    def __init__(self,model,eval_func):
+        super().__init__()
+        self.model = model
+        self.eval_function = eval_func
+        self.metric_name = f'{metrics.metric_map[self.eval_function.__name__]}'
+
+    def count_parameters(self):
+        '''Count number of parameters  in model'''
+
+        return sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+
+    def skip_batch(self,label):
+        '''Batches with all labels same should be skipped, as can't be used for AUC calculation'''
+        y = label.cpu().detach().numpy()
+        return np.all(y == y[0])
 
     def train(self, iterator, optimizer, criterion):
-    
+        ''' Training function'''
+
         epoch_loss = 0
         epoch_acc = 0   
         self.model.train()
         from tqdm import tqdm 
 
+        skipped = 0
         for batch in tqdm(iterator):
             
+            if self.skip_batch(batch.label):
+                skipped += 1
+                continue
+
             optimizer.zero_grad()           
             predictions = self.model(batch.text).squeeze(1)          
             loss = criterion(predictions, batch.label)    
-            acc = self.binary_accuracy(predictions, batch.label)     
+            acc = self.eval_function(predictions, batch.label)
             loss.backward()     
             optimizer.step()
             
             epoch_loss += loss.item()
-            epoch_acc += acc.item()
-            
-        return epoch_loss / len(iterator), epoch_acc / len(iterator)
+            epoch_acc += acc
+        
+        length = (len(iterator) -skipped)
+        return epoch_loss / length, epoch_acc / length
 
     def evaluate(self, iterator, criterion):
-    
+        ''' Evaluation funtion'''
+
         epoch_loss = 0
         epoch_acc = 0       
         self.model.eval()
         
         with torch.no_grad():
-        
+            skipped = 0
             for batch in iterator:
+
+                if self.skip_batch(batch.label):
+                    skipped += 1
+                    continue
 
                 predictions = self.model(batch.text).squeeze(1)
                 loss = criterion(predictions, batch.label)             
-                acc = self.binary_accuracy(predictions, batch.label)
+                acc = self.eval_function(predictions, batch.label)
                 epoch_loss += loss.item()
-                epoch_acc += acc.item()
+                epoch_acc += acc
             
-        return epoch_loss / len(iterator), epoch_acc / len(iterator)
+        length = (len(iterator) -skipped)
+        return epoch_loss / length, epoch_acc / length
 
     def epoch_time(self,start_time, end_time):
         elapsed_time = end_time - start_time
@@ -146,13 +208,15 @@ class CNNHelper(object):
         return elapsed_mins, elapsed_secs
 
     def start(self, train_iterator, valid_iterator,optimizer, criterion,N_EPOCHS = 5):
+        ''' Start training and Evaluation for all epochs'''
 
         self.best_valid_loss = float('inf')
         self.val_loss = []
-        self.val_acc = []
+        self.val_metric = []
         self.tr_loss = []
-        self.tr_acc = []
+        self.tr_metric = []
         print(f'The model has {self.count_parameters():,} trainable parameters')
+        print(f'Using {self.metric_name} metric')
 
         for epoch in range(N_EPOCHS):
             
@@ -160,31 +224,31 @@ class CNNHelper(object):
             start_time = time.time()
             print("epoch #{}".format(epoch))
             # Get epoch losses and accuracies 
-            train_loss, train_acc = self.train(train_iterator, optimizer, criterion)
-            valid_loss, valid_acc = self.evaluate(valid_iterator, criterion)
+            train_loss, train_metric = self.train(train_iterator, optimizer, criterion)
+            valid_loss, valid_metric = self.evaluate(valid_iterator, criterion)
             
             end_time = time.time()
             epoch_mins, epoch_secs = self.epoch_time(start_time, end_time)
             
             # Save training metrics
             self.val_loss.append(valid_loss)
-            self.val_acc.append(valid_acc)
+            self.val_metric.append(valid_metric)
             self.tr_loss.append(train_loss)
-            self.tr_acc.append(train_acc)
+            self.tr_metric.append(train_metric)
             
             if valid_loss < self.best_valid_loss:
                 best_valid_loss = valid_loss
                 torch.save(self.model.state_dict(), 'CNN-model.pt')
                     
                 print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
-                print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
-                print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
+                print(f'\tTrain Loss: {train_loss:.3f} | Train {self.metric_name}: {train_metric*100:.2f}%')
+                print(f'\t Val. Loss: {valid_loss:.3f} |  Val. {self.metric_name}: {valid_metric*100:.2f}%')
         
         return self
 
     def plot(self):
+        ''' Plot accuracy metric and loss'''
 
-        # Plot accuracy and loss
         fig, ax = plt.subplots(1, 2, figsize=(15,5))
         ax[0].plot(self.val_loss, label='Validation loss')
         ax[0].plot(self.tr_loss, label='Training loss')
@@ -192,18 +256,19 @@ class CNNHelper(object):
         ax[0].set_xlabel('Epoch')
         ax[0].set_ylabel('Loss')
         ax[0].legend()
-        ax[1].plot(self.val_acc, label='Validation accuracy')
-        ax[1].plot(self.tr_acc, label='Training accuracy')
-        ax[1].set_title('Accuracies')
+        ax[1].plot(self.val_metric, label=f'Validation {self.metric_name}')
+        ax[1].plot(self.tr_metric, label=f'Training {self.metric_name}')
+        ax[1].set_title(f'{self.metric_name}')
         ax[1].set_xlabel('Epoch')
-        ax[1].set_ylabel('Loss')
+        ax[1].set_ylabel(f'{self.metric_name}')
         plt.legend()
         plt.show()
     
     def test(self,test_iterator,criterion):
-        # Evaluate model on test data
+        '''Evaluate model on test data'''
+
         self.model.load_state_dict(torch.load('CNN-model.pt'))
         test_loss, test_acc = self.evaluate(test_iterator, criterion)
-        print(f'Test Loss: {test_loss:.3f} | Test Acc: {test_acc*100:.2f}%')
+        print(f'Test Loss: {test_loss:.3f} | Test {self.metric_name}: {test_acc*100:.2f}%')
 
         return self
