@@ -58,6 +58,7 @@ class CNNMUL(nn.Module):
                  dropout, pad_idx):
         
         super().__init__()
+        self.output_dim = output_dim
         # Create word embeddings from the input words     
         self.embedding = nn.Embedding(vocab_size, vector_size, 
                                       padding_idx = pad_idx)
@@ -102,9 +103,7 @@ class metrics(object):
         """
         Returns accuracy per batch, i.e. if you get 8/10 right, this returns 0.8, NOT 8
         """
-        #round predictions to the closest integer
-        rounded_preds = torch.round(torch.sigmoid(preds))
-        correct = (rounded_preds == y).float()
+        correct = (preds == y).float()
         acc = correct.sum() / len(correct)
         return acc.item()
 
@@ -113,10 +112,8 @@ class metrics(object):
         """
         Returns ROC AUC: When Only one class present in y, ROC AUC is underfined
         """
-        #round predictions to the closest integer
-        rounded_preds = torch.round(torch.sigmoid(preds))
         Y = y.cpu().detach().numpy()
-        pred = rounded_preds.cpu().detach().numpy()
+        pred = preds.cpu().detach().numpy()
         return roc_auc_score(Y,pred)
 
     @staticmethod
@@ -124,10 +121,8 @@ class metrics(object):
         """
         Returns AUC: When Only one class present in y, AUC is underfined
         """
-        #round predictions to the closest integer
-        rounded_preds = torch.round(torch.sigmoid(preds))
         Y = y.cpu().detach().numpy()
-        pred = rounded_preds.cpu().detach().numpy()
+        pred = preds.cpu().detach().numpy()
         false_positive_rate, true_positive_rate, thresholds = roc_curve(Y, pred)
         return auc(false_positive_rate, true_positive_rate)
 
@@ -149,6 +144,13 @@ class CNNHelper(object):
         y = label.cpu().detach().numpy()
         return np.all(y == y[0])
 
+    def cast_label(self, label, criterion):
+        '''Some criterion functions require label to be a certain type'''
+        if type(criterion).__name__ == 'CrossEntropyLoss':
+            return label.long()
+        else:
+            return label
+
     def train(self, iterator, optimizer, criterion):
         ''' Training function'''
 
@@ -166,7 +168,13 @@ class CNNHelper(object):
 
             optimizer.zero_grad()           
             predictions = self.model(batch.text).squeeze(1)          
+            batch.label = self.cast_label(batch.label, criterion)
             loss = criterion(predictions, batch.label)    
+            if self.model.output_dim == 1:
+                #round predictions to the closest integer
+                predictions = torch.round(torch.sigmoid(predictions))
+            else:
+                _, predictions = torch.max(predictions, 1) # get max index from one-hot predictions 
             acc = self.eval_function(predictions, batch.label)
             loss.backward()     
             optimizer.step()
@@ -193,7 +201,13 @@ class CNNHelper(object):
                     continue
 
                 predictions = self.model(batch.text).squeeze(1)
+                batch.label = self.cast_label(batch.label, criterion)
                 loss = criterion(predictions, batch.label)             
+                if self.model.output_dim == 1:
+                    #round predictions to the closest integer
+                    predictions = torch.round(torch.sigmoid(predictions))
+                else:
+                    _, predictions = torch.max(predictions, 1) # get max index from one-hot predictions
                 acc = self.eval_function(predictions, batch.label)
                 epoch_loss += loss.item()
                 epoch_acc += acc
