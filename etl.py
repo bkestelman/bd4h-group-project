@@ -1,12 +1,17 @@
 """ETL Preprocessing (Label Extraction)"""
-from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count
+from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count, lower, substring_index
 from pyspark.sql.window import Window
 
 from utils.utils import timeit
 import conf.config as config
 
 @timeit
-def preprocess_data(admissions, noteevents):
+def preprocess_data(admissions, noteevents, instructions_only=False):
+    """
+    @param instructions_only : most discharge summaries include instructions at the end. If
+        this param is True, only include the instructions, dropping the rest of the summary
+        (also drop summaries which don't have instructions)
+    """
     # add_next_admission date and days between admissions for each admission record
     next_admit = add_next_admission(admissions)
     # filter noteevents to only look for discharge summary
@@ -29,6 +34,13 @@ def preprocess_data(admissions, noteevents):
     # label dataset
     dataset_labeled = label_readmissions(dataset, days=30)
     # dataset_labeled.where(~col('NEXT_ADMITTIME').isNull()).show()
+
+    if instructions_only:
+        dataset_labeled = (dataset_labeled
+            .where(lower(col('TEXT')).contains('instructions:'))
+            .withColumn('TEXT', substring_index(lower(col('TEXT')), 'instructions:', -1))
+            )
+        dataset_labeled.show()
 
     if config.debug_print:
         # ***admissions total records:  58976
