@@ -4,7 +4,7 @@ word2vec_params = {
 }
 
 fit_limits = {
-    'word2vec': 1000, 
+    'word2vec': 5000, 
 }
 
 bag_of_words_params = {
