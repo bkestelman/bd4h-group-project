@@ -4,6 +4,7 @@ from .bag_of_words import BagOfWords
 from .word2vec import BasicWord2Vec
 from utils.utils import timeit
 from conf.hyperparameters import fit_limits 
+from export_data import write_vectors_csv
 import conf.config as config
 import utils.hdfs_utils as hdfs_utils
 
@@ -32,7 +33,8 @@ def add_features(dataset, features_builder, save_path=None):
         print('Saving model to', save_path)
         pipelineModel.save(save_path)
         if features_builder.__name__ == 'BasicWord2Vec': #TODO: ideally, model-specific functionality should not be in this function, but not sure where to put this
-            write_vectors_csv(pipelineModel[-1].getVectors(), save_path + '_vectors') # besides saving the full pipeline model, we also want the word vectors as their own csv for pytorch
+            write_vectors_csv(pipelineModel.stages[-1].getVectors(), save_path + '_vectors') # besides saving the full pipeline model, we also want the word vectors as their own csv for pytorch
+            print('Wrote vectors to ', save_path + '_vectors')
 
     dataset_w_features = pipelineModel.transform(dataset)
     #print(dataset_w_features.select('FEATURES').first())

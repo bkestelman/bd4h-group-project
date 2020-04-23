@@ -1,4 +1,6 @@
-from pyspark.sql.functions import regexp_replace
+from pyspark.sql.functions import regexp_replace, expr, udf, col, lit
+from pyspark.sql.types import FloatType
+import helper_udfs
 
 def write_labeled_readmissions_csv(labeled_dataset, dirname):
     """
@@ -16,5 +18,14 @@ def write_labeled_readmissions_csv(labeled_dataset, dirname):
             )
 
 def write_vectors_csv(vectors_df, path):
-    vectors_df.repartition(1).write.option('sep', ' ').csv(path)
+    """
+    @param vectors_df : the result of Word2VecModel.getVectors() (schema is 'word', 'vector' where 'vector' is an array)
+    """
+    # Can't write an array to csv directly, so we have to create a df column for each vector dimension
+    out_df = vectors_df
+    vector_get_udf = udf(helper_udfs.vector_get, FloatType())
+    for i in range(len(vectors_df.first()['vector'])):
+        #out_df = out_df.withColumn(str(i), expr('vector[' + str(i) + ']'))
+        out_df = out_df.withColumn(str(i), vector_get_udf(col('vector'), lit(i)))
+    out_df.drop('vector').repartition(1).write.option('sep', ' ').csv(path)
 
