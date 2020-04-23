@@ -29,7 +29,24 @@ def RawTokenizer(inputCol, outputCol):
 
 def NoPuncTokenizer(inputCol, outputCol):
     """Tokenizes words and removes punctuation"""
-    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, pattern='\\W|[0-9]')
+    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, 
+        pattern='\\W|[0-9]',
+        toLowercase=True)
+    return tokenizer
+
+def SeparatePuncTokenizer(inputCol, outputCol):
+    """
+    Separates words from punctuation (but does not remove punctuation)
+    Useful for Word2Vec - the point is that we want to create vectors for punctuation because
+    it may include useful information, but we don't want to create vectors for specific 
+    combinations of words with punctuation. 
+    Example: "Weight:130" -> ['weight', ':', '130']
+    """
+    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, 
+        gaps=False, # match pattern in text, not gaps
+        pattern='[.,/?!$%()+="\'<>:;]|[\w-]+', # match words (optionally containing dashes '-') and most types of punctuation separately
+        toLowercase=True
+    )
     return tokenizer
 
 def StopWordsRemover(inputCol, outputCol):

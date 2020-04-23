@@ -21,4 +21,5 @@ pssh -i -h ${CLUSTER_HOSTS_FILE} -x "-oStrictHostKeyChecking=no" \
 sudo ${PIP} install -U -r requirements.txt # pip install on master
 
 ## Set up requirements for pytorch
+sudo ${PIP} install -r requirements_pytorch.txt
 sudo python3 -m spacy download en

@@ -1,7 +1,3 @@
 spark-nlp==2.4.5
-matplotlib
 pytest
 hdfs
-torch
-torchtext
-spacy
