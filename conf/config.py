@@ -13,7 +13,7 @@ sample_size = 3000
 
 # second preference (if set, subsample negative labels according to balance_dataset_ratio)
 balance_dataset_negatives = True
-balance_dataset_ratio = 4  # num negatives:num_positives
+balance_dataset_ratio = 1  # num negatives:num_positives
 
 # to run locally, set env var RUN_ON_AWS=False, defaults to true
 run_on_aws = True if os.getenv('RUN_ON_AWS', 'true').lower() in ['true', 'yes'] else False
