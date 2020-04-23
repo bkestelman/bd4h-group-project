@@ -44,7 +44,7 @@ def SeparatePuncTokenizer(inputCol, outputCol):
     """
     tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, 
         gaps=False, # match pattern in text, not gaps
-        pattern='[.,/?!$%()+="\'<>:;]|[\w-&&[^0-9]]+', # match words (optionally containing dashes '-') and most types of punctuation separately
+        pattern='[.,/?!$%()+="\'<>:;]|[^0-9\W]+', # match words and most types of punctuation separately
         toLowercase=True
     )
     return tokenizer

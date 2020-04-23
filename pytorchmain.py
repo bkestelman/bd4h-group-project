@@ -55,7 +55,7 @@ train_data = TabularDataset(
 train_data, valid_data = train_data.split(random_state = random.seed(SEED))
 train_data, test_data = train_data.split(random_state = random.seed(SEED))
 
-MAX_VOCAB_SIZE = 30_000
+MAX_VOCAB_SIZE = 50_000
 
 TEXT.build_vocab(train_data, 
                  max_size = MAX_VOCAB_SIZE, 
