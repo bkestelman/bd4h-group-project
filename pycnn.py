@@ -2,56 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import random
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-
+import torchtext
 from torchtext import data
 from torchtext import datasets
-import os
-import torchtext
 from torchtext.data import Dataset,TabularDataset
-from torch.utils.data import DataLoader
-import string
-import pandas as pd
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 
-class Utility(object):
-    @staticmethod
-    def string_cleaner(in_filename,out_filename):
-        '''Clean out punctuations from sentences'''
-        
-        df =pd.read_csv(in_filename,usecols=['text','label'])
-        df['text'] = df['text'].apply(lambda x: x.translate(str.maketrans('', '', string.punctuation)))
-        df.to_csv(out_filename, index=False,header=['text','label'])
-
-class MovieDataset(Dataset):
-    def __init__(self, path):
-        self.samples = []
-
-        for filename in os.listdir(path):
-            if 'ascii' in filename:
-                label = 'pos' if 'pos' in filename else 'neg'
-                f_path = os.path.join(path, filename)
-                with open(f_path, 'r') as sent_file:
-                    for text in sent_file.read().splitlines():
-                        self.samples.append((text,label))
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx):
-        return self.samples[idx]
-    
-    def save(self,filename,headers):
-        dataloader = DataLoader(self, batch_size=1, shuffle=True)
-        data = [(str(batch[0][0]),str(batch[1][0])) for _, batch in enumerate(dataloader)]
-        df = pd.DataFrame(data, columns=[headers[0],headers[1]])
-        df.to_csv(filename, index=False)
-
 class CNNMUL(nn.Module):
-    ''' Define network architecture and forward path. '''
+    ''' Define our network architecture and forward path. '''
     def __init__(self, vocab_size, 
                  vector_size, n_filters, 
                  filter_sizes, output_dim, 
@@ -68,7 +29,10 @@ class CNNMUL(nn.Module):
                                               out_channels = n_filters, 
                                               kernel_size = (fs, vector_size)) 
                                     for fs in filter_sizes])
-        
+        # Second convolutions layer after a maxpool, final featrure extraction layer
+        self.convs2 = nn.Conv2d(in_channels = 1, 
+                                              out_channels = n_filters, 
+                                              kernel_size = (vector_size,1)) 
         # Add a fully connected layer for final predicitons
         self.linear = nn.Linear(len(filter_sizes) * n_filters, output_dim)
         
@@ -86,10 +50,16 @@ class CNNMUL(nn.Module):
         conved = [F.relu(conv(embedded)).squeeze(3) for conv in self.convs]
             
         # Pooling layer to reduce dimensionality    
-        pooled = [F.max_pool1d(conv, conv.shape[2]).squeeze(2) for conv in conved]
+        pooled = [F.max_pool1d(conv, conv.shape[2]).unsqueeze(1) for conv in conved]
+
+        #final conv layer
+        conved2 = [torch.tanh(self.convs2(p)).squeeze(3) for p in pooled]
         
+        # Pooling layer to reduce dimensionality  
+        pooled2 = [F.max_pool1d(conv, conv.shape[2]).squeeze(2) for conv in conved2]
+
         # Dropout layer
-        cat = self.dropout(torch.cat(pooled, dim = 1))
+        cat = self.dropout(torch.cat(pooled2, dim = 1))
         return self.linear(cat)
 
 class metrics(object):
@@ -154,8 +124,7 @@ class CNNHelper(object):
     def train(self, iterator, optimizer, criterion):
         ''' Training function'''
 
-        epoch_loss = 0
-        epoch_acc = 0   
+        epoch_loss = epoch_acc = 0
         self.model.train()
         from tqdm import tqdm 
 
@@ -188,8 +157,7 @@ class CNNHelper(object):
     def evaluate(self, iterator, criterion):
         ''' Evaluation funtion'''
 
-        epoch_loss = 0
-        epoch_acc = 0       
+        epoch_loss = epoch_acc= 0
         self.model.eval()
         
         with torch.no_grad():
@@ -225,10 +193,7 @@ class CNNHelper(object):
         ''' Start training and Evaluation for all epochs'''
 
         self.best_valid_loss = float('inf')
-        self.val_loss = []
-        self.val_metric = []
-        self.tr_loss = []
-        self.tr_metric = []
+        self.val_loss = self.val_metric =self.tr_loss = self.tr_metric = []
         print(f'The model has {self.count_parameters():,} trainable parameters')
         print(f'Using {self.metric_name} metric')
 
@@ -276,7 +241,7 @@ class CNNHelper(object):
         ax[1].set_xlabel('Epoch')
         ax[1].set_ylabel(f'{self.metric_name}')
         plt.legend()
-        plt.show()
+        plt.savefig("plot.png")
     
     def test(self,test_iterator,criterion):
         '''Evaluate model on test data'''

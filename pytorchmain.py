@@ -5,22 +5,19 @@ import torch.optim as optim
 import random
 import numpy as np
 import time
-import matplotlib.pyplot as plt
-
 from torchtext import data
 from torchtext import datasets
 from torchtext.vocab import Vectors
-import os
 import torchtext
 from torchtext.data import Dataset,TabularDataset
 from torch.utils.data import DataLoader
-from pycnn import CNNHelper,MovieDataset,CNNMUL,metrics
+from pycnn import CNNHelper,CNNMUL,metrics
 
 # TODO: move these options to a separate config file
 SEED = 1234
 N_EPOCHS = 4
 # VECTORS can be one of the prebaked options available in torchtext, or a csv (passed to a Vectors object as below):
-VECTORS_CSV = 'word_vectors_50d_balance_1_1.csv' 
+VECTORS_CSV = 'data/word_vectors_50d_balance_1_1.csv' 
 VECTORS, EMBEDDING_DIM = Vectors(VECTORS_CSV), 50
 #VECTORS, EMBEDDING_DIM = "glove.6B.100d", 100
 OUTPUT_DIM = 2
@@ -38,10 +35,6 @@ torch.backends.cudnn.deterministic = True
 
 TEXT = data.Field(tokenize = 'spacy', batch_first = True)
 LABEL = data.LabelField(dtype = torch.float)
-
-# PoC using movie review data
-#dataset=MovieDataset("./data/rt-polaritydata")
-#dataset.save('preprocessed.csv',['text','label'])
 
 tst_datafields = [("text", TEXT),
     ("label", LABEL) 
