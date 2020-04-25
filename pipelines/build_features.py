@@ -18,7 +18,7 @@ def add_features(dataset, features_builder, save_path=None):
     """
     print('Adding features using', features_builder.__name__)
 
-    if features_builder.__name__ == 'BasicWord2Vec': #TODO: ideally, model-specific functionality should not be in this function, but not sure where to put this
+    if features_builder.__name__ == 'BasicWord2Vec' and fit_limits['word2vec'] is not None: #TODO: ideally, model-specific functionality should not be in this function, but not sure where to put this
         fit_dataset = dataset.limit(fit_limits['word2vec']) # Word2Vec gets much slower as the dataset grows, so we can only use part of it to create the word vectors
     else:
         fit_dataset = dataset

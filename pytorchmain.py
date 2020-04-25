@@ -20,7 +20,7 @@ from pycnn import CNNHelper,MovieDataset,CNNMUL,metrics
 SEED = 1234
 N_EPOCHS = 4
 # VECTORS can be one of the prebaked options available in torchtext, or a csv (passed to a Vectors object as below):
-VECTORS_CSV = '/home/data/word_vectors_50d_balance_1_1.csv' 
+VECTORS_CSV = 'word_vectors_50d_balance_1_1.csv' 
 VECTORS, EMBEDDING_DIM = Vectors(VECTORS_CSV), 50
 #VECTORS, EMBEDDING_DIM = "glove.6B.100d", 100
 OUTPUT_DIM = 2

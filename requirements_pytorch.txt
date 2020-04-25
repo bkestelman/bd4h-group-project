@@ -1,0 +1,7 @@
+# Requirements for pytorch (only need to be installed locally/on master)
+torch
+torchtext
+spacy
+pandas
+scikit-learn
+matplotlib

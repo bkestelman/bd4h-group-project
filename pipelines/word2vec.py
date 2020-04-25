@@ -3,16 +3,18 @@ from pyspark.ml import Pipeline
 from pyspark.ml.feature import Word2Vec
 
 import nlp_preprocessing_tools as nlp
-from nlp_preprocessing_tools import RawTokenizer, Lemmatizer, Finisher
+from nlp_preprocessing_tools import RawTokenizer, SeparatePuncTokenizer, Lemmatizer, Finisher
 from conf.hyperparameters import word2vec_params
 
 def BasicWord2Vec(inputCol, outputCol):
-    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
-    finisher = Finisher(inputCol='TOKENS', outputCol='FINISHED_TOKENS') 
-    word2vec = Word2Vec(inputCol='FINISHED_TOKENS', outputCol=outputCol, minCount=0, **word2vec_params) 
+#    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+    tokenizer = SeparatePuncTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+    #finisher = Finisher(inputCol='TOKENS', outputCol='FINISHED_TOKENS') 
+    final_tokens_col = 'TOKENS'
+    word2vec = Word2Vec(inputCol=final_tokens_col, outputCol=outputCol, minCount=0, **word2vec_params) 
     pipe = Pipeline(stages=[
         tokenizer,
-        finisher,
+        #finisher,
         word2vec,
         ])
     return pipe
