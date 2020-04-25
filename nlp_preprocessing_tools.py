@@ -13,7 +13,7 @@ from sparknlp.annotator import Tokenizer, Stemmer, SentenceEmbeddings
 from sparknlp.pretrained import LemmatizerModel, WordEmbeddingsModel, BertEmbeddings, ElmoEmbeddings, NorvigSweetingModel
 
 lang = 'en'
-document_col = '_document' # column name to use as output for sparknlp's DocumentAssembler
+document_col = '_DOC' # column name to use as output for sparknlp's DocumentAssembler
 
 def DocAssembler(inputCol, outputCol):
     doc_assembler = (sparknlp.base.DocumentAssembler()
@@ -94,8 +94,14 @@ def SpellChecker(inputCol, outputCol):
 
 def GloveWordEmbeddings(inputCol, outputCol):
     """
+    DEPRECATED
+    There are some complications making GloveWordEmbeddings work with the new code structure
+    where we clean and tokenize data as part of preprocessing before passing it to ML models.
+    Since we test glove embeddings in the pytorch code anyway, this function is not so 
+    important. Thus, at this point it makes sense to just not use it.
     @param inputCol : tokens
     """
+    doc_assembler = DocumentAssembler(inputCol=inputCol, outputCol=document_col)
     word_embeddings = (WordEmbeddingsModel.pretrained()
         .setInputCols([document_col, inputCol])
         .setOutputCol('EMBEDDINGS')

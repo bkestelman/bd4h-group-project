@@ -11,14 +11,21 @@ def BasicWord2Vec(inputCol, outputCol):
     pipe = Pipeline(stages=[word2vec])
     return pipe 
 
-def GloveWordEmbeddings(inputCol, outputCol):
-#    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
-    word_embeddings = nlp.GloveWordEmbeddings(inputCol=inputCol, outputCol=outputCol)
-    pipe = Pipeline(stages=[
-#        tokenizer,
-        word_embeddings,
-        ])
-    return pipe
+#def GloveWordEmbeddings(inputCol, outputCol):
+#    """
+#    DEPRECATED
+#    There are some complications making GloveWordEmbeddings work with the new code structure
+#    where we clean and tokenize data as part of preprocessing before passing it to ML models.
+#    Since we test glove embeddings in the pytorch code anyway, this function is not so 
+#    important. Thus, at this point it makes sense to just not use it.
+#    """
+##    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+#    word_embeddings = nlp.GloveWordEmbeddings(inputCol=inputCol, outputCol=outputCol)
+#    pipe = Pipeline(stages=[
+##        tokenizer,
+#        word_embeddings,
+#        ])
+#    return pipe
 
 # BERT is a state of the art pretrained word embedding model
 # Couldn't test locally - ran out of memory. May be worthwhile testing on the cluster

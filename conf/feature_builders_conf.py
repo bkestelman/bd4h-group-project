@@ -5,5 +5,5 @@
 # The column names for the above choice are 'TEXT' and 'TOKENS'
 default_pipeline_input_col = 'TOKENS'
 pipeline_input_cols = {
-    #'BasicWord2Vec': 'TOKENS'
+    #'BasicWord2Vec': 'TOKENS',
 }

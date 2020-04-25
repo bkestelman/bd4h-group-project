@@ -2,17 +2,16 @@ import time
 
 import conf.config as config
 from .bag_of_words import BagOfWords 
-from .word2vec import BasicWord2Vec, GloveWordEmbeddings
+from .word2vec import BasicWord2Vec
 from .tf_idf import TfIdf
 from .build_features import add_features
 from models import Model
 
 def run_spark_pipelines(labeled_dataset, train_ids, test_ids):
     features_builders = [
-        #TfIdf,
+        TfIdf,
         BagOfWords,
         BasicWord2Vec,
-#        GloveWordEmbeddings,
         ]
 
     algorithms = [
