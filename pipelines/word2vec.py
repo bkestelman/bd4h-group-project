@@ -12,10 +12,10 @@ def BasicWord2Vec(inputCol, outputCol):
     return pipe 
 
 def GloveWordEmbeddings(inputCol, outputCol):
-    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
-    word_embeddings = nlp.GloveWordEmbeddings(inputCol='TOKENS', outputCol=outputCol)
+#    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+    word_embeddings = nlp.GloveWordEmbeddings(inputCol=inputCol, outputCol=outputCol)
     pipe = Pipeline(stages=[
-        tokenizer,
+#        tokenizer,
         word_embeddings,
         ])
     return pipe

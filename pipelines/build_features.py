@@ -29,7 +29,7 @@ def add_features(dataset, features_builder, save_path=None):
         pipelineModel = PipelineModel.load(save_path)
     else:
         pipelineModel = (features_builder(
-            inputCol=feature_builders_conf.pipeline_input_cols.get(features_builder.__name__, 'TEXT'), 
+            inputCol=feature_builders_conf.pipeline_input_cols.get(features_builder.__name__, feature_builders_conf.default_pipeline_input_col), 
             outputCol='FEATURES')
             .fit(fit_dataset)
             )
@@ -43,6 +43,5 @@ def add_features(dataset, features_builder, save_path=None):
 
     dataset_w_features = pipelineModel.transform(dataset)
     #print(dataset_w_features.select('FEATURES').first())
-
 
     return dataset_w_features
