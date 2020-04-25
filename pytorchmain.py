@@ -5,24 +5,27 @@ import torch.optim as optim
 import random
 import numpy as np
 import time
-import matplotlib.pyplot as plt
-
 from torchtext import data
 from torchtext import datasets
 from torchtext.vocab import Vectors
-import os
 import torchtext
 from torchtext.data import Dataset,TabularDataset
 from torch.utils.data import DataLoader
-from pycnn import CNNHelper,MovieDataset,CNNMUL,metrics
+from pycnn import CNNHelper,CNNMUL,metrics
 
 # TODO: move these options to a separate config file
 SEED = 1234
 N_EPOCHS = 3
 # VECTORS can be one of the prebaked options available in torchtext, or a csv (passed to a Vectors object as below):
-VECTORS_CSV = 'word_vectors_50d_balance_1_1.csv' 
+VECTORS_CSV = '/home/data/vectors_spellchecked.csv' 
 VECTORS, EMBEDDING_DIM = Vectors(VECTORS_CSV), 50
 #VECTORS, EMBEDDING_DIM = "glove.6B.100d", 100
+OUTPUT_DIM = 1
+if OUTPUT_DIM == 1:
+    criterion = nn.BCEWithLogitsLoss()
+else:
+    criterion = nn.CrossEntropyLoss() # includes softmax, better for one-hot 2d output
+MULTI_LAYER = True # If True, use multi-layered CNN
 
 #ref:https://github.com/bentrevett/pytorch-sentiment-analysis/blob/master/6%20-%20Transformers%20for%20Sentiment%20Analysis.ipynb
 
@@ -34,15 +37,11 @@ torch.backends.cudnn.deterministic = True
 TEXT = data.Field(tokenize = 'spacy', batch_first = True)
 LABEL = data.LabelField(dtype = torch.float)
 
-# PoC using movie review data
-#dataset=MovieDataset("./data/rt-polaritydata")
-#dataset.save('preprocessed.csv',['text','label'])
-
 tst_datafields = [("text", TEXT),
     ("label", LABEL) 
     ]
 
-csv_file = 'data/readmissions.csv'
+csv_file = '/home/data/readmissions_1_1_60days_spellchecked.csv'
 csv_reader_params = {
     'escapechar': '\\', # python's default is None, but our data has escaped quotes as '\"'
     }
@@ -64,7 +63,7 @@ TEXT.build_vocab(train_data,
 
 LABEL.build_vocab(train_data)
 
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -80,11 +79,10 @@ train_iterator, valid_iterator, test_iterator = data.BucketIterator.splits(
 INPUT_DIM = len(TEXT.vocab)
 N_FILTERS = 100
 FILTER_SIZES = [1,2,3,4,5]
-OUTPUT_DIM = 1
 DROPOUT = 0.5
 PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
 
-model = CNNMUL(INPUT_DIM, EMBEDDING_DIM, N_FILTERS, FILTER_SIZES, OUTPUT_DIM, DROPOUT, PAD_IDX)
+model = CNNMUL(INPUT_DIM, EMBEDDING_DIM, N_FILTERS, FILTER_SIZES, OUTPUT_DIM, DROPOUT, PAD_IDX, MULTI_LAYER)
 
 pretrained_embeddings = TEXT.vocab.vectors
 model.embedding.weight.data.copy_(pretrained_embeddings)
@@ -94,7 +92,6 @@ model.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
 model.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
 
 optimizer = optim.Adam(model.parameters())
-criterion = nn.BCEWithLogitsLoss()
 model = model.to(device)
 criterion = criterion.to(device)
 
