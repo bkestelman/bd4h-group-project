@@ -10,10 +10,18 @@ import sparknlp
 import sparknlp.base
 from sparknlp.base import RecursivePipeline
 from sparknlp.annotator import Tokenizer, Stemmer, SentenceEmbeddings
-from sparknlp.pretrained import LemmatizerModel, WordEmbeddingsModel, BertEmbeddings, ElmoEmbeddings
+from sparknlp.pretrained import LemmatizerModel, WordEmbeddingsModel, BertEmbeddings, ElmoEmbeddings, NorvigSweetingModel
 
 lang = 'en'
 document_col = '_document' # column name to use as output for sparknlp's DocumentAssembler
+
+def DocAssembler(inputCol, outputCol):
+    doc_assembler = (sparknlp.base.DocumentAssembler()
+        .setInputCol(inputCol)
+        .setOutputCol(outputCol)
+        .setCleanupMode('shrink')
+        )
+    return doc_assembler
 
 def RawTokenizer(inputCol, outputCol):
     """Tokenizes words and punctuations with no frills"""
@@ -34,6 +42,20 @@ def NoPuncTokenizer(inputCol, outputCol):
         toLowercase=True)
     return tokenizer
 
+#def SeparatePuncTokenizer(inputCol, outputCol):
+#    """
+#    Separates words from punctuation (but does not remove punctuation)
+#    Useful for Word2Vec - the point is that we want to create vectors for punctuation because
+#    it may include useful information, but we don't want to create vectors for specific 
+#    combinations of words with punctuation. 
+#    Example: "Weight:130" -> ['weight', ':', '130']
+#    """
+#    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, 
+#        gaps=False, # match pattern in text, not gaps
+#        pattern='[.,/?!$%()+="\'<>:;]|[^0-9\W]+', # match words and most types of punctuation separately
+#        toLowercase=True
+#    )
+#    return tokenizer
 def SeparatePuncTokenizer(inputCol, outputCol):
     """
     Separates words from punctuation (but does not remove punctuation)
@@ -42,10 +64,12 @@ def SeparatePuncTokenizer(inputCol, outputCol):
     combinations of words with punctuation. 
     Example: "Weight:130" -> ['weight', ':', '130']
     """
-    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, 
-        gaps=False, # match pattern in text, not gaps
-        pattern='[.,/?!$%()+="\'<>:;]|[^0-9\W]+', # match words and most types of punctuation separately
-        toLowercase=True
+    tokenizer = (Tokenizer()
+        .setInputCols([inputCol])
+        .setOutputCol(outputCol)
+        #.setContextChars(['(', ')', '?', '!', ':', ';', '/', '+'])
+        .setTargetPattern('\w')
+        .setSplitPattern('\W')
     )
     return tokenizer
 
@@ -63,6 +87,15 @@ def Lemmatizer(inputCol, outputCol):
             .setOutputCol(outputCol)
             )
     return lemmatizer
+
+def SpellChecker(inputCol, outputCol):
+    #doc_assembler = (sparknlp.base.DocumentAssembler()
+    #    .setInputCol(inputCol)
+    #    .setOutputCol(document_col)
+    #    .setCleanupMode('shrink')
+    #    )
+    spell_checker = NorvigSweetingModel.pretrained('spellcheck_norvig').setInputCols([inputCol]).setOutputCol(outputCol)
+    return spell_checker
 
 def GloveWordEmbeddings(inputCol, outputCol):
     """

@@ -9,10 +9,10 @@ from models import Model
 
 def run_spark_pipelines(labeled_dataset, train_ids, test_ids):
     features_builders = [
-        TfIdf,
+        #TfIdf,
         BagOfWords,
         BasicWord2Vec,
-        GloveWordEmbeddings,
+#        GloveWordEmbeddings,
         ]
 
     algorithms = [

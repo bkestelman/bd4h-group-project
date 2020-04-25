@@ -3,21 +3,27 @@ from pyspark.ml import Pipeline
 from pyspark.ml.feature import Word2Vec
 
 import nlp_preprocessing_tools as nlp
-from nlp_preprocessing_tools import RawTokenizer, SeparatePuncTokenizer, Lemmatizer, Finisher
+from nlp_preprocessing_tools import DocAssembler, RawTokenizer, SeparatePuncTokenizer, Lemmatizer, Finisher, SpellChecker
 from conf.hyperparameters import word2vec_params
 
 def BasicWord2Vec(inputCol, outputCol):
-#    tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
-    tokenizer = SeparatePuncTokenizer(inputCol=inputCol, outputCol='TOKENS') 
-    #finisher = Finisher(inputCol='TOKENS', outputCol='FINISHED_TOKENS') 
-    final_tokens_col = 'TOKENS'
-    word2vec = Word2Vec(inputCol=final_tokens_col, outputCol=outputCol, minCount=0, **word2vec_params) 
-    pipe = Pipeline(stages=[
-        tokenizer,
-        #finisher,
-        word2vec,
-        ])
-    return pipe
+    word2vec = Word2Vec(inputCol=inputCol, outputCol=outputCol, minCount=0, **word2vec_params) 
+    pipe = Pipeline(stages=[word2vec])
+    return pipe 
+    #doc_assembler = DocAssembler(inputCol, 'DOC')
+    #tokenizer = SeparatePuncTokenizer(inputCol='DOC', outputCol='TOKENS') 
+    ##tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
+    #spell_checker = SpellChecker(inputCol='TOKENS', outputCol='SPELL_CHECKED')
+    #finisher = Finisher(inputCol='SPELL_CHECKED', outputCol='FINISH') 
+    #word2vec = Word2Vec(inputCol='FINISH', outputCol=outputCol, minCount=0, **word2vec_params) 
+    #pipe = Pipeline(stages=[
+    #    doc_assembler,
+    #    tokenizer,
+    #    spell_checker,
+    #    finisher,
+    #    word2vec,
+    #    ])
+    #return pipe
 
 def GloveWordEmbeddings(inputCol, outputCol):
     tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 

@@ -6,6 +6,7 @@ from utils.utils import timeit
 from conf.hyperparameters import fit_limits 
 from export_data import write_vectors_csv
 import conf.config as config
+import conf.feature_builders_conf as feature_builders_conf
 import utils.hdfs_utils as hdfs_utils
 
 @timeit
@@ -27,7 +28,11 @@ def add_features(dataset, features_builder, save_path=None):
         print('Loading saved model from', save_path)
         pipelineModel = PipelineModel.load(save_path)
     else:
-        pipelineModel = features_builder(inputCol='TEXT', outputCol='FEATURES').fit(fit_dataset)
+        pipelineModel = (features_builder(
+            inputCol=feature_builders_conf.pipeline_input_cols.get(features_builder.__name__, 'TEXT'), 
+            outputCol='FEATURES')
+            .fit(fit_dataset)
+            )
 
     if save_path is not None and not hdfs_utils.file_exists(save_path):
         print('Saving model to', save_path)

@@ -1,9 +1,12 @@
 """ETL Preprocessing (Label Extraction)"""
-from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count
+from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count, lower, regexp_replace
 from pyspark.sql.window import Window
+from pyspark.ml import Pipeline
 
 from utils.utils import timeit
 import conf.config as config
+
+from nlp_preprocessing_tools import SeparatePuncTokenizer, DocAssembler, Finisher, SpellChecker
 
 @timeit
 def preprocess_data(admissions, noteevents):
@@ -29,6 +32,34 @@ def preprocess_data(admissions, noteevents):
     # label dataset
     dataset_labeled = label_readmissions(dataset, days=30)
     # dataset_labeled.where(~col('NEXT_ADMITTIME').isNull()).show()
+
+    ### Extra cleaning and tokenizing
+    # New approach to the code is to do all cleaning and tokenizing here
+    # ML Algorithms no longer need to include NLP preprocessing as part of their pipelines
+    # They should now use 'PROCESSED_TEXT' column as input
+    # That said, algorithms which want to do tokenization differently from here can use the original raw 'TEXT' column
+    # Make all text lowercase and remove numbers
+    dataset_labeled = (dataset_labeled
+        .withColumn('TEXT', regexp_replace(col('TEXT'), '[0-9]', ''))
+        .withColumn('TEXT', lower(col('TEXT')))
+        )
+    doc_assembler = DocAssembler(inputCol='TEXT', outputCol='DOC')
+    tokenizer = SeparatePuncTokenizer(inputCol='DOC', outputCol='TOK_TEMP')
+    spell_checker = SpellChecker(inputCol='TOK_TEMP', outputCol='SPELL_CHECKED')
+    finisher = Finisher(inputCol='SPELL_CHECKED', outputCol='TOKENS')
+    nlp_preprocessing_pipeline = Pipeline(stages=[
+        doc_assembler,
+        tokenizer,
+        spell_checker,
+        finisher,
+        ])
+    dataset_labeled = nlp_preprocessing_pipeline.fit(dataset_labeled).transform(dataset_labeled)
+    dataset_labeled.printSchema()
+
+    #counts = dataset_labeled.where('LABEL = 1').groupby('NEXT_DAYS_ADMIT').count()
+    #counts.show()
+    #counts.write.csv('counts')
+    #print('wrote counts csv')
 
     if config.debug_print:
         # ***admissions total records:  58976
