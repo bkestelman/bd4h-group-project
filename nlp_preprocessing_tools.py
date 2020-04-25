@@ -89,11 +89,6 @@ def Lemmatizer(inputCol, outputCol):
     return lemmatizer
 
 def SpellChecker(inputCol, outputCol):
-    #doc_assembler = (sparknlp.base.DocumentAssembler()
-    #    .setInputCol(inputCol)
-    #    .setOutputCol(document_col)
-    #    .setCleanupMode('shrink')
-    #    )
     spell_checker = NorvigSweetingModel.pretrained('spellcheck_norvig').setInputCols([inputCol]).setOutputCol(outputCol)
     return spell_checker
 
