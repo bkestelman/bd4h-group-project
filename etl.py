@@ -59,11 +59,6 @@ def preprocess_data(admissions, noteevents):
     dataset_labeled = nlp_preprocessing_pipeline.fit(dataset_labeled).transform(dataset_labeled)
     #dataset_labeled.printSchema()
 
-    #counts = dataset_labeled.where('LABEL = 1').groupby('NEXT_DAYS_ADMIT').count()
-    #counts.show()
-    #counts.write.csv('counts')
-    #print('wrote counts csv')
-
     if config.debug_print:
         # ***admissions total records:  58976
         # ***next_admit total records:  58976
