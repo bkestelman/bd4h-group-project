@@ -15,9 +15,6 @@ def write_labeled_readmissions_csv(labeled_dataset, dirname):
     if dirname is not None:
         (labeled_dataset.select(text_col, label_col)
             .withColumn(text_col, regexp_replace(text_col, '\n', ' ')) # remove newlines from text
-            #.withColumnRenamed('TEXT', 'text') # rename for consistency with pytorch schema
-            #.withColumnRenamed('LABEL', 'label')
-            #.write.option('header', 'true') # include header for consistency with pytorch
             .write.option('header', 'false') # header will be added in bash script after concatenating the partial files   
             .csv(dirname) # Note: this will create a directory with one or more .csv files in it
             )
