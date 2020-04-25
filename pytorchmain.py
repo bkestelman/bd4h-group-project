@@ -18,11 +18,16 @@ from pycnn import CNNHelper,MovieDataset,CNNMUL,metrics
 
 # TODO: move these options to a separate config file
 SEED = 1234
-N_EPOCHS = 3
+N_EPOCHS = 4
 # VECTORS can be one of the prebaked options available in torchtext, or a csv (passed to a Vectors object as below):
 VECTORS_CSV = 'word_vectors_50d_balance_1_1.csv' 
 VECTORS, EMBEDDING_DIM = Vectors(VECTORS_CSV), 50
 #VECTORS, EMBEDDING_DIM = "glove.6B.100d", 100
+OUTPUT_DIM = 2
+if OUTPUT_DIM == 1:
+    criterion = nn.BCEWithLogitsLoss()
+else:
+    criterion = nn.CrossEntropyLoss() # includes softmax, better for one-hot 2d output
 
 #ref:https://github.com/bentrevett/pytorch-sentiment-analysis/blob/master/6%20-%20Transformers%20for%20Sentiment%20Analysis.ipynb
 
@@ -42,7 +47,7 @@ tst_datafields = [("text", TEXT),
     ("label", LABEL) 
     ]
 
-csv_file = 'data/readmissions.csv'
+csv_file = 'data/readmissions_balance_1_1.csv'
 csv_reader_params = {
     'escapechar': '\\', # python's default is None, but our data has escaped quotes as '\"'
     }
@@ -80,7 +85,6 @@ train_iterator, valid_iterator, test_iterator = data.BucketIterator.splits(
 INPUT_DIM = len(TEXT.vocab)
 N_FILTERS = 100
 FILTER_SIZES = [1,2,3,4,5]
-OUTPUT_DIM = 1
 DROPOUT = 0.5
 PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
 
@@ -94,7 +98,6 @@ model.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
 model.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
 
 optimizer = optim.Adam(model.parameters())
-criterion = nn.BCEWithLogitsLoss()
 model = model.to(device)
 criterion = criterion.to(device)
 
