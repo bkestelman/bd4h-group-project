@@ -36,7 +36,7 @@ def preprocess_data(admissions, noteevents):
     ### Extra cleaning and tokenizing
     # New approach to the code is to do all cleaning and tokenizing here
     # ML Algorithms no longer need to include NLP preprocessing as part of their pipelines
-    # They should now use 'PROCESSED_TEXT' column as input
+    # They should now use 'TOKENS' column as input
     # That said, algorithms which want to do tokenization differently from here can use the original raw 'TEXT' column
     # Make all text lowercase and remove numbers
     dataset_labeled = (dataset_labeled
