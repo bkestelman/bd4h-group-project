@@ -10,20 +10,6 @@ def BasicWord2Vec(inputCol, outputCol):
     word2vec = Word2Vec(inputCol=inputCol, outputCol=outputCol, minCount=0, **word2vec_params) 
     pipe = Pipeline(stages=[word2vec])
     return pipe 
-    #doc_assembler = DocAssembler(inputCol, 'DOC')
-    #tokenizer = SeparatePuncTokenizer(inputCol='DOC', outputCol='TOKENS') 
-    ##tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
-    #spell_checker = SpellChecker(inputCol='TOKENS', outputCol='SPELL_CHECKED')
-    #finisher = Finisher(inputCol='SPELL_CHECKED', outputCol='FINISH') 
-    #word2vec = Word2Vec(inputCol='FINISH', outputCol=outputCol, minCount=0, **word2vec_params) 
-    #pipe = Pipeline(stages=[
-    #    doc_assembler,
-    #    tokenizer,
-    #    spell_checker,
-    #    finisher,
-    #    word2vec,
-    #    ])
-    #return pipe
 
 def GloveWordEmbeddings(inputCol, outputCol):
     tokenizer = RawTokenizer(inputCol=inputCol, outputCol='TOKENS') 
