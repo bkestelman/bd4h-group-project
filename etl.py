@@ -33,20 +33,23 @@ def preprocess_data(admissions, noteevents):
     dataset_labeled = label_readmissions(dataset, days=30)
     # dataset_labeled.where(~col('NEXT_ADMITTIME').isNull()).show()
 
-    ### Extra cleaning and tokenizing
+    ### Extra cleaning, spell checking, and tokenizing
     # New approach to the code is to do all cleaning and tokenizing here
     # ML Algorithms no longer need to include NLP preprocessing as part of their pipelines
     # They should now use 'TOKENS' column as input
     # That said, algorithms which want to do tokenization differently from here can use the original raw 'TEXT' column
-    # Make all text lowercase and remove numbers
+    # (but for the most part, we should phase that out)
     dataset_labeled = (dataset_labeled
-        .withColumn('TEXT', regexp_replace(col('TEXT'), '[0-9]', ''))
-        .withColumn('TEXT', lower(col('TEXT')))
+        .withColumn('TEXT', regexp_replace(col('TEXT'), '[0-9]', '')) # remove numbers
+        .withColumn('TEXT', lower(col('TEXT'))) # make all text lowercase
         )
     doc_assembler = DocAssembler(inputCol='TEXT', outputCol='DOC')
     tokenizer = SeparatePuncTokenizer(inputCol='DOC', outputCol='TOK_TEMP')
-    spell_checker = SpellChecker(inputCol='TOK_TEMP', outputCol='SPELL_CHECKED')
-    finisher = Finisher(inputCol='SPELL_CHECKED', outputCol='TOKENS')
+    if config.spellchecking:
+        spell_checker = SpellChecker(inputCol='TOK_TEMP', outputCol='SPELL_CHECKED')
+        finisher = Finisher(inputCol='SPELL_CHECKED', outputCol='TOKENS')
+    else:
+        finisher = Finisher(inputCol='TOK_TEMP', outputCol='TOKENS')
     nlp_preprocessing_pipeline = Pipeline(stages=[
         doc_assembler,
         tokenizer,
@@ -54,7 +57,7 @@ def preprocess_data(admissions, noteevents):
         finisher,
         ])
     dataset_labeled = nlp_preprocessing_pipeline.fit(dataset_labeled).transform(dataset_labeled)
-    dataset_labeled.printSchema()
+    #dataset_labeled.printSchema()
 
     #counts = dataset_labeled.where('LABEL = 1').groupby('NEXT_DAYS_ADMIT').count()
     #counts.show()
