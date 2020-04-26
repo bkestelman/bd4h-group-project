@@ -16,6 +16,9 @@ sample_size = 3000
 balance_dataset_negatives = True
 balance_dataset_ratio = 1  # num negatives:num_positives
 
+spellchecking = True # include spellchecking as part of preprocessing for all pipelines
+readmission_threshold_days = 30
+
 # to run locally, set env var RUN_ON_AWS=False, defaults to true
 run_on_aws = True if os.getenv('RUN_ON_AWS', 'true').lower() in ['true', 'yes'] else False
 

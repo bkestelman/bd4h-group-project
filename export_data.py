@@ -1,4 +1,4 @@
-from pyspark.sql.functions import regexp_replace, expr, udf, col, lit
+from pyspark.sql.functions import regexp_replace, expr, udf, col, lit, concat_ws
 from pyspark.sql.types import FloatType
 import helper_udfs
 
@@ -7,12 +7,14 @@ def write_labeled_readmissions_csv(labeled_dataset, dirname):
     @param labeled_dataset
     @param dirname : output directory name (Spark may create many .csv files in this directory, depending on the size of the data). If None, do nothing
     """
+    tokens_col = 'TOKENS'
+    text_col = 'PROCESSED_TEXT'
+    label_col = 'LABEL'
+    # create string from the processed tokens, restoring the format of the original raw text, but cleaned
+    labeled_dataset = labeled_dataset.withColumn(text_col, concat_ws(' ', tokens_col)) 
     if dirname is not None:
-        (labeled_dataset.select('TEXT', 'LABEL')
-            .withColumn('TEXT', regexp_replace('TEXT', '\n', ' ')) # remove newlines from text
-            #.withColumnRenamed('TEXT', 'text') # rename for consistency with pytorch schema
-            #.withColumnRenamed('LABEL', 'label')
-            #.write.option('header', 'true') # include header for consistency with pytorch
+        (labeled_dataset.select(text_col, label_col)
+            .withColumn(text_col, regexp_replace(text_col, '\n', ' ')) # remove newlines from text
             .write.option('header', 'false') # header will be added in bash script after concatenating the partial files   
             .csv(dirname) # Note: this will create a directory with one or more .csv files in it
             )

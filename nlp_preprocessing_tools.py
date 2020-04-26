@@ -10,10 +10,18 @@ import sparknlp
 import sparknlp.base
 from sparknlp.base import RecursivePipeline
 from sparknlp.annotator import Tokenizer, Stemmer, SentenceEmbeddings
-from sparknlp.pretrained import LemmatizerModel, WordEmbeddingsModel, BertEmbeddings, ElmoEmbeddings
+from sparknlp.pretrained import LemmatizerModel, WordEmbeddingsModel, BertEmbeddings, ElmoEmbeddings, NorvigSweetingModel
 
 lang = 'en'
-document_col = '_document' # column name to use as output for sparknlp's DocumentAssembler
+document_col = '_DOC' # column name to use as output for sparknlp's DocumentAssembler
+
+def DocAssembler(inputCol, outputCol):
+    doc_assembler = (sparknlp.base.DocumentAssembler()
+        .setInputCol(inputCol)
+        .setOutputCol(outputCol)
+        .setCleanupMode('shrink')
+        )
+    return doc_assembler
 
 def RawTokenizer(inputCol, outputCol):
     """Tokenizes words and punctuations with no frills"""
@@ -42,10 +50,12 @@ def SeparatePuncTokenizer(inputCol, outputCol):
     combinations of words with punctuation. 
     Example: "Weight:130" -> ['weight', ':', '130']
     """
-    tokenizer = RegexTokenizer(inputCol=inputCol, outputCol=outputCol, 
-        gaps=False, # match pattern in text, not gaps
-        pattern='[.,/?!$%()+="\'<>:;]|[^0-9\W]+', # match words and most types of punctuation separately
-        toLowercase=True
+    tokenizer = (Tokenizer()
+        .setInputCols([inputCol])
+        .setOutputCol(outputCol)
+        #.setContextChars(['(', ')', '?', '!', ':', ';', '/', '+'])
+        .setTargetPattern('\w')
+        .setSplitPattern('\W')
     )
     return tokenizer
 
@@ -64,10 +74,20 @@ def Lemmatizer(inputCol, outputCol):
             )
     return lemmatizer
 
+def SpellChecker(inputCol, outputCol):
+    spell_checker = NorvigSweetingModel.pretrained('spellcheck_norvig').setInputCols([inputCol]).setOutputCol(outputCol)
+    return spell_checker
+
 def GloveWordEmbeddings(inputCol, outputCol):
     """
+    DEPRECATED
+    There are some complications making GloveWordEmbeddings work with the new code structure
+    where we clean and tokenize data as part of preprocessing before passing it to ML models.
+    Since we test glove embeddings in the pytorch code anyway, this function is not so 
+    important. Thus, at this point it makes sense to just not use it.
     @param inputCol : tokens
     """
+    doc_assembler = DocumentAssembler(inputCol=inputCol, outputCol=document_col)
     word_embeddings = (WordEmbeddingsModel.pretrained()
         .setInputCols([document_col, inputCol])
         .setOutputCol('EMBEDDINGS')

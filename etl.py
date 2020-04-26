@@ -1,9 +1,12 @@
 """ETL Preprocessing (Label Extraction)"""
-from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count
+from pyspark.sql.functions import col, when, lag, lead, datediff, concat_ws, collect_list, count, lower, regexp_replace
 from pyspark.sql.window import Window
+from pyspark.ml import Pipeline
 
 from utils.utils import timeit
 import conf.config as config
+
+from nlp_preprocessing_tools import SeparatePuncTokenizer, DocAssembler, Finisher, SpellChecker, document_col
 
 @timeit
 def preprocess_data(admissions, noteevents):
@@ -27,8 +30,41 @@ def preprocess_data(admissions, noteevents):
     dataset = dataset['SUBJECT_ID', 'HADM_ID', 'NEXT_ADMITTIME', 'NEXT_ADMISSION_TYPE', 'NEXT_DAYS_ADMIT', 'TEXT']
 
     # label dataset
-    dataset_labeled = label_readmissions(dataset, days=30)
+    dataset_labeled = label_readmissions(dataset, days=config.readmission_threshold_days)
     # dataset_labeled.where(~col('NEXT_ADMITTIME').isNull()).show()
+
+    ### Extra cleaning, spell checking, and tokenizing
+    # New approach to the code is to do all cleaning and tokenizing here
+    # ML Algorithms no longer need to include NLP preprocessing as part of their pipelines
+    # They should now use 'TOKENS' column as input
+    # That said, algorithms which want to do tokenization differently from here can use the original raw 'TEXT' column
+    # (but for the most part, we should phase that out)
+    dataset_labeled = (dataset_labeled
+        .withColumn('TEXT', regexp_replace(col('TEXT'), '[0-9]', '')) # remove numbers
+        .withColumn('TEXT', lower(col('TEXT'))) # make all text lowercase
+        )
+    doc_assembler = DocAssembler(inputCol='TEXT', outputCol=document_col)
+    tokenizer = SeparatePuncTokenizer(inputCol=document_col, outputCol='TOK_TEMP')
+    # TODO: have some code duplication for creating the pipeline here depending on whether spell checking is enabled
+    # should find a cleaner way to code this some day...
+    if config.spellchecking:
+        spell_checker = SpellChecker(inputCol='TOK_TEMP', outputCol='SPELL_CHECKED')
+        finisher = Finisher(inputCol='SPELL_CHECKED', outputCol='TOKENS')
+        nlp_preprocessing_pipeline = Pipeline(stages=[
+            doc_assembler,
+            tokenizer,
+            spell_checker,
+            finisher,
+            ])
+    else:
+        finisher = Finisher(inputCol='TOK_TEMP', outputCol='TOKENS')
+        nlp_preprocessing_pipeline = Pipeline(stages=[
+            doc_assembler,
+            tokenizer,
+            finisher,
+            ])
+    dataset_labeled = nlp_preprocessing_pipeline.fit(dataset_labeled).transform(dataset_labeled)
+    #dataset_labeled.printSchema()
 
     if config.debug_print:
         # ***admissions total records:  58976
@@ -130,3 +166,4 @@ def label_readmissions(admissions, days):
         .otherwise(0)  # otherwise (next admission more than 'days' days after this admission), 0
         )
     return readmissions 
+
